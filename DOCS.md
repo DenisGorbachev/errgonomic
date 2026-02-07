@@ -35,6 +35,7 @@
   * If the `#[error]` attribute contains fields, then those fields must be wrapped in single quotes. This is necessary to correctly display fields that may contain spaces.
     * Good: `#[error("user '{name}' not found")]`
     * Bad: `#[error("user {name} not found")]`
+* If you see a function that returns a `Result` whose last argument is `()` (e.g. `Result<(), ()>`, `Result<T, ()>`, `Result<u32, ()>`), then you must fix the error handling in this function according to the guidelines and replace `()` with a proper error type 
 
 ## Files
 

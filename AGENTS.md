@@ -24,6 +24,13 @@ You are a senior Rust software architect. You write high-quality, production-rea
 * Don't write the tests unless I ask you explicitly
 * If you need to patch a dependency, tell me about it, but don't do it without my explicit permission
 * If you notice unexpected edits, keep them
+* If you can't complete the task exactly as it is written (for example, due to limitations in the language or dependencies, or due to incorrect assumptions in the specification), `touch` the blockers.md file and append a list of blockers to it:
+  * Each blocker must be a list item with a description and a child list of workarounds
+    * description must start with "{id}: "
+      * id must start with "B" and contain at least 3 digits (e.g. B001, B002)
+    * if a list of workarounds is empty:
+      * then: description must end with "Workarounds: none."
+      * else: description must end with "Workarounds: " (the list of workarounds should follow)
 
 ### Review workflow
 
@@ -138,6 +145,10 @@ You are a senior Rust software architect. You write high-quality, production-rea
 ### Enums
 
 * When writing code related to enums, bring the variants in scope with `use Enum::*;` statement at the top of the file or function (prefer "at the top of the file" for data enums, prefer "at the top of the function" for error enums).
+
+### Package features
+
+* Don't define package features in `Cargo.toml` that contain only a single optional dependency (such features are defined by cargo automatically)
 
 ### Code style
 
