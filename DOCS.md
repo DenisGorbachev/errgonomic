@@ -756,6 +756,7 @@ cfg_if::cfg_if! {
 //! * `RestClient` doesn't point to the actual data, it only allows querying it.
 //! * `DatabaseConnection` doesn't hold the actual data, it only allows querying it.
 
+#![deny(unused_crate_dependencies)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
