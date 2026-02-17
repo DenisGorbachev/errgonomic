@@ -115,7 +115,7 @@ echo "" >> "$file"
 # `--no-git-sort-by-changes` stabilizes file order across invocations
 repomix \
     --include "src,tests,examples" \
-    --ignore "src/drafts,src/**/fixtures/**" \
+    --ignore "src/**/drafts.rs,src/**/drafts/**,src/**/fixtures/**" \
     --style markdown \
     --no-file-summary \
     --no-directory-structure \
