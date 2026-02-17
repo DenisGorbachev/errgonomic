@@ -132,8 +132,6 @@ A group of [fallible expressions](#fallible-expression) where each output variab
 
 Aliases: FEG.
 
-### 
-
 ### Data type
 
 A type that holds the actual data.
