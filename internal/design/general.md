@@ -31,6 +31,27 @@
         }
       }
       ```
+* It's better not to require a single enum error variant for each fallible expression group because it would make the errors hard to understand (especially when only a single FE returns an `Err`). For example (bad):
+  ```rust
+  fn foo(input: String) -> Result<u32, FooError> {
+      use FooError::*;
+      let a = get_a(input.clone());
+      let b = get_b(input);
+      match (a, b) {
+          (Ok(a), Ok(b)) => Ok(a + b),
+          (a, b) => Err(GetAOrBFailed {
+              a,
+              b,
+          }),
+      }
+  }
+  
+  #[derive(Error, Debug)]
+  pub enum FooError {
+      #[error("get a or b failed")]
+      GetAOrBFailed { a: Result<u32, GetAError>, b: Result<u32, GetBError> },
+  }
+  ```
 * Some foreign crates export types that keep the relevant fields private, so they can only be accessed via `Debug` trait (for example: `xshell::Cmd` has a private `sh: Shell` field, which contains `cwd: PathBuf`, which is relevant to the call)
 * Some foreign crates export types that have a `Debug` impl that doesn't explain the error (e.g. `toml_edit::Error` contains the whole TOML document and a span, so the user has to decipher the error by finding the relevant part of the document by the span)
 * Some foreign crates export functions that consume the argument but don't return it in `Err` variant

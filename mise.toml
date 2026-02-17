@@ -110,7 +110,7 @@ dir=$MISE_PROJECT_ROOT
 file=$usage_file
 # header=$(taplo get -f "$dir/Cargo.toml" "package.description")
 
-cp $dir/internal/AGENTS.md "$file"
+cp $dir/internal/guidelines.md "$file"
 echo "" >> "$file"
 # `--no-git-sort-by-changes` stabilizes file order across invocations
 repomix \
