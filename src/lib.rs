@@ -98,5 +98,5 @@ mod functions;
 
 pub use functions::*;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "std"))]
 mod drafts;
