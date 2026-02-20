@@ -9,8 +9,10 @@ cfg_if::cfg_if! {
         mod writeln_error;
         mod write_to_named_temp_file;
         mod exit_result;
+        mod render_command;
         pub use writeln_error::*;
         pub use write_to_named_temp_file::*;
         pub use exit_result::*;
+        pub use render_command::*;
     }
 }

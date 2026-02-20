@@ -255,6 +255,19 @@ pub fn partition_result<T, E>(results: impl IntoIterator<Item = Result<T, E>>) -
 }
 ````
 
+## File: src/functions/render_command.rs
+
+````rust
+use std::process::Command;
+
+// TODO: This function doesn't escape the spaces in program or args
+pub fn render_command(command: &Command) -> String {
+    let mut output = vec![command.get_program()];
+    output.extend(command.get_args());
+    output.join(" ".as_ref()).to_string_lossy().into()
+}
+````
+
 ## File: src/functions/write_to_named_temp_file.rs
 
 ````rust
@@ -705,9 +718,11 @@ cfg_if::cfg_if! {
         mod writeln_error;
         mod write_to_named_temp_file;
         mod exit_result;
+        mod render_command;
         pub use writeln_error::*;
         pub use write_to_named_temp_file::*;
         pub use exit_result::*;
+        pub use render_command::*;
     }
 }
 ````
