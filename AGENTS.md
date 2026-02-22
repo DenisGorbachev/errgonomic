@@ -451,6 +451,7 @@ toml = "0.9"
 [features]
 default = ["std"]
 std = ["tempfile", "thiserror/std"]
+process = ["std", "shlex"]
 ```
 
 ### src/lib.rs

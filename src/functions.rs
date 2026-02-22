@@ -16,7 +16,7 @@ cfg_if::cfg_if! {
 }
 
 cfg_if::cfg_if! {
-    if #[cfg(all(feature = "std", feature = "shlex"))] {
+    if #[cfg(all(feature = "process"))] {
         mod render_command;
         pub use render_command::*;
     }
