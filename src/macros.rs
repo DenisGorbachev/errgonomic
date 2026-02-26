@@ -184,6 +184,7 @@ macro_rules! _index_err_async {
 
 #[cfg(all(test, feature = "std"))]
 mod tests {
+
     use crate::{ErrVec, ItemError, PathBufDisplay};
     use futures::future::join_all;
     use serde::{Deserialize, Serialize};
@@ -404,7 +405,7 @@ mod tests {
     }
 
     #[derive(Clone, Debug)]
-    struct Db {
+    struct State {
         user: User,
     }
 
@@ -414,12 +415,19 @@ mod tests {
     }
 
     #[allow(dead_code)]
-    fn get_username(db: Arc<RwLock<Db>>) -> Result<String, GetUsernameError> {
+    #[derive(Clone, Debug)]
+    struct Book {
+        user_idx: usize,
+        name: String,
+    }
+
+    #[allow(dead_code)]
+    fn get_username(state: Arc<RwLock<State>>) -> Result<String, GetUsernameError> {
         use GetUsernameError::*;
-        // `db.read()` returns `LockResult` whose Err variant is `PoisonError<RwLockReadGuard<'_, T>>`, which contains an anonymous lifetime
+        // `state.read()` returns `LockResult` whose Err variant is `PoisonError<RwLockReadGuard<'_, T>>`, which contains an anonymous lifetime
         // The error enum returned from this function must contain only owned fields, so it can't contain a `source` that has a lifetime
         // Therefore, we have to use handle_discard!, although it is discouraged
-        let guard = handle_discard!(db.read(), AcquireReadLockFailed);
+        let guard = handle_discard!(state.read(), AcquireReadLockFailed);
         let username = guard.user.username.clone();
         Ok(username)
     }
@@ -428,6 +436,42 @@ mod tests {
     pub enum GetUsernameError {
         #[error("failed to acquire read lock")]
         AcquireReadLockFailed,
+    }
+
+    #[derive(Clone, Debug)]
+    struct Db {
+        users: Vec<User>,
+        books: Vec<Book>,
+    }
+
+    impl Db {
+        /// Validates only the foreign keys
+        /// Assumes that the collection items have already been validated before they were inserted
+        #[allow(dead_code)]
+        pub fn validate(&self) -> impl Iterator<Item = DbValidateError> {
+            use DbValidateError::*;
+
+            self.books
+                .iter()
+                .enumerate()
+                .filter_map(|(book_idx, book)| {
+                    let user_idx = book.user_idx;
+                    if self.users.get(user_idx).is_none() {
+                        Some(UserNotFound {
+                            book_idx,
+                            user_idx,
+                        })
+                    } else {
+                        None
+                    }
+                })
+        }
+    }
+
+    #[derive(Error, Debug)]
+    pub enum DbValidateError {
+        #[error("book #{book_idx} has a non-existent user #{user_idx}")]
+        UserNotFound { book_idx: usize, user_idx: usize },
     }
 
     #[allow(dead_code)]
