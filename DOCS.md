@@ -162,7 +162,7 @@ A string that is empty or contains only whitespace characters.
 
 ## Files
 
-## File: src/functions/exit_result.rs
+## File: src/functions/exit.rs
 
 ````rust
 use crate::eprintln_error;
@@ -182,6 +182,17 @@ pub fn exit_result<E: Error>(result: Result<ExitCode, E>) -> ExitCode {
         eprintln_error(&err);
         ExitCode::FAILURE
     })
+}
+
+/// Converts an [`Option`] into an [`ExitCode`], printing a detailed error trace on failure.
+pub fn exit_option<E: Error>(option: Option<E>) -> ExitCode {
+    match option {
+        None => ExitCode::SUCCESS,
+        Some(err) => {
+            eprintln_error(&err);
+            ExitCode::FAILURE
+        }
+    }
 }
 
 /// Converts an [`impl IntoIterator<Item = Result<(), E>>`](IntoIterator) into an [`ExitCode`], printing a detailed error trace on the first failure.
@@ -722,10 +733,10 @@ cfg_if::cfg_if! {
     if #[cfg(feature = "std")] {
         mod writeln_error;
         mod write_to_named_temp_file;
-        mod exit_result;
+        mod exit;
         pub use writeln_error::*;
         pub use write_to_named_temp_file::*;
-        pub use exit_result::*;
+        pub use exit::*;
     }
 }
 
@@ -1033,7 +1044,7 @@ macro_rules! _index_err_async {
 
 #[cfg(all(test, feature = "std"))]
 mod tests {
-    use crate::macros::tests::DbValidateError::UserNotFound;
+
     use crate::{ErrVec, ItemError, PathBufDisplay};
     use futures::future::join_all;
     use serde::{Deserialize, Serialize};
@@ -1299,8 +1310,8 @@ mod tests {
         #[allow(dead_code)]
         pub fn validate(&self) -> impl Iterator<Item = DbValidateError> {
             use DbValidateError::*;
-            let errors = self
-                .books
+
+            self.books
                 .iter()
                 .enumerate()
                 .filter_map(|(book_idx, book)| {
@@ -1313,8 +1324,7 @@ mod tests {
                     } else {
                         None
                     }
-                });
-            errors
+                })
         }
     }
 
