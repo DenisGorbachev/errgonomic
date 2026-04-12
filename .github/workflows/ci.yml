@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         rust:
-          - ${{ runner.temp }}/deno
+          - stable
           - beta
           - nightly
     timeout-minutes: 45
