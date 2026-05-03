@@ -14,7 +14,13 @@ if [[ -z $name_new ]]; then
   name_new=$name_new_default
 fi
 
-read -r -p "Rust package description: " description
+description=""
+while [[ -z $description ]]; do
+  read -r -p "Rust package description: " description
+  if [[ -z $description ]]; then
+    echo "Rust package description is required for public packages." >&2
+  fi
+done
 
 read -r -p "Rust package title for README (default: same as description): " title
 if [[ -z $title ]]; then
