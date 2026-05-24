@@ -681,7 +681,7 @@ use std::error::Error;
 
 pub struct ErrorDisplayer<'a, E: ?Sized>(pub &'a E);
 
-impl<'a, E: Error + ?Sized> Display for ErrorDisplayer<'a, E> {
+impl<E: Error + ?Sized> Display for ErrorDisplayer<'_, E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         writeln_error_to_formatter(self.0, f)
     }
@@ -836,6 +836,8 @@ cfg_if::cfg_if! {
 #![doc = "```"]
 //!
 
+#![deny(clippy::arithmetic_side_effects)]
+#![cfg_attr(not(test), deny(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;
@@ -1110,7 +1112,12 @@ mod tests {
         let results = numbers.into_iter().map(|number| {
             use CheckEvenError::*;
             if number % 2 == 0 {
-                Ok(number * 10)
+                match number.checked_mul(10) {
+                    Some(product) => Ok(product),
+                    None => Err(NumberOverflowed {
+                        number,
+                    }),
+                }
             } else {
                 Err(NumberNotEven {
                     number,
@@ -1232,6 +1239,8 @@ mod tests {
     enum CheckEvenError {
         #[error("number is not even: {number}")]
         NumberNotEven { number: u32 },
+        #[error("number overflowed: {number}")]
+        NumberOverflowed { number: u32 },
     }
 
     async fn check_file(path: PathBuf) -> Result<String, CheckFileError> {

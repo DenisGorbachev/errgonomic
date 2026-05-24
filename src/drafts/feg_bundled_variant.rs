@@ -5,7 +5,13 @@ pub fn foo_bundled(input: String) -> Result<u32, FooError> {
     let a = get_a(input.clone());
     let b = get_b(input);
     match (a, b) {
-        (Ok(a), Ok(b)) => Ok(a + b),
+        (Ok(a), Ok(b)) => match a.checked_add(b) {
+            Some(output) => Ok(output),
+            None => Err(AddFailed {
+                a,
+                b,
+            }),
+        },
         (a, b) => Err(GetAOrBFailed {
             a,
             b,
@@ -25,6 +31,8 @@ pub fn get_b(_input: String) -> Result<u32, GetBError> {
 pub enum FooError {
     #[error("get a or b failed")]
     GetAOrBFailed { a: Result<u32, GetAError>, b: Result<u32, GetBError> },
+    #[error("add failed")]
+    AddFailed { a: u32, b: u32 },
 }
 
 #[derive(Error, Debug)]

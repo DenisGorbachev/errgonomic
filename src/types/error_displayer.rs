@@ -4,7 +4,7 @@ use std::error::Error;
 
 pub struct ErrorDisplayer<'a, E: ?Sized>(pub &'a E);
 
-impl<'a, E: Error + ?Sized> Display for ErrorDisplayer<'a, E> {
+impl<E: Error + ?Sized> Display for ErrorDisplayer<'_, E> {
     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
         writeln_error_to_formatter(self.0, f)
     }

@@ -405,15 +405,24 @@ A function marked with `#[test]` or `#[tokio::test]`.
 
 * Must return a `Result`
 * Must implement proper error handling via `errgonomic` crate
+* Should use macros from `assertables` crate
+  * Should use `assert_infix` instead of `assert_gt`, `assert_ge`, `assert_lt`, `assert_le`, `assert_eq`
 
 ### Macros
 
 * Write `macro_rules!` macros to reduce boilerplate
 * If you see similar code in different places, write a macro and replace the similar code with a macro call
 
+### Shell
+
+* For shell scripts and commands that will be read by the user (written per direct request of the user):
+  * Use long options
+* For shell scripts and commands what won't be read by the user (written to accomplish a local task):
+  * Use short options
+
 ### Cargo.toml
 
-* Don't define package features contain only a single optional dependency (such features are already defined by cargo automatically)
+* Don't define package features with only a single optional dependency (such features are already defined by cargo automatically)
 
 ### Sandbox
 
@@ -469,11 +478,14 @@ exclude = [
     "*.local.*",
     "doc/dev",
     "specs",
+    "AGENTS.ts",
     "README.ts",
     "AGENTS*.md",
     "CLAUDE*.md",
+    "deno.lock",
     "deno.json",
     "commitlint.config.mjs",
+    "fnox.toml",
     "lefthook.yml",
     "mise.toml",
     "rumdl.toml",
@@ -511,6 +523,18 @@ toml = "0.9"
 default = ["std"]
 std = ["tempfile", "thiserror/std"]
 process = ["std", "shlex"]
+```
+
+### fnox.toml
+
+```toml
+#:schema https://fnox.jdx.dev/schema.json
+
+if_missing = "error"
+
+[providers]
+keychain = { type = "keychain", service = "rust-public-lib-template" }
+pass = { type = "password-store", prefix = "rust-public-lib-template/" }
 ```
 
 ### src/lib.rs
@@ -601,6 +625,8 @@ process = ["std", "shlex"]
 #![doc = "```"]
 //!
 
+#![deny(clippy::arithmetic_side_effects)]
+#![cfg_attr(not(test), deny(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 extern crate alloc;

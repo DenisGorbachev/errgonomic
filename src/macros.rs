@@ -250,7 +250,12 @@ mod tests {
         let results = numbers.into_iter().map(|number| {
             use CheckEvenError::*;
             if number % 2 == 0 {
-                Ok(number * 10)
+                match number.checked_mul(10) {
+                    Some(product) => Ok(product),
+                    None => Err(NumberOverflowed {
+                        number,
+                    }),
+                }
             } else {
                 Err(NumberNotEven {
                     number,
@@ -372,6 +377,8 @@ mod tests {
     enum CheckEvenError {
         #[error("number is not even: {number}")]
         NumberNotEven { number: u32 },
+        #[error("number overflowed: {number}")]
+        NumberOverflowed { number: u32 },
     }
 
     async fn check_file(path: PathBuf) -> Result<String, CheckFileError> {
