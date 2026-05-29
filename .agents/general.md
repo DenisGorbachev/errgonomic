@@ -47,12 +47,17 @@ Notes:
 * After finishing the task: run `mise run agent:on:stop` (this command runs the lints and tests)
   * `mise run agent:on:stop` may modify `README.md`, `AGENTS.md`, `Cargo.toml` (this is normal, don't mention it)
   * `mise run agent:on:stop` includes `cargo fmt`, `cargo check`, `cargo clippy`, `cargo nextest` (no need to run them separately)
+* After finishing the original task, improve the code:
+  * Remove unnecessary code
+  * Remove unnecessary allocations
+  * Refactor code that converts between types into `From` / `Into` impls
 * Don't edit the files in the following top-level dirs: `specs`, `.agents`
 * Don't write the tests unless I ask you explicitly
 * If a later instruction overrides the former instruction: follow the later instruction (last override wins).
 * If you need to patch a dependency, tell me about it, but don't do it without my explicit permission
 * If you notice unexpected edits, keep them
 * If you notice incorrect code, tell me
+* If you have to apply a workaround, add a comment next to the workaround that explains why it is necessary, and also mention the workaround in your final report
 * If the task can't be completed exactly as it is written (for example, due to limitations in the language or dependencies, or due to incorrect assumptions in the specification), `touch` the blockers.md file and append a list of blockers to it:
   * Each blocker must be a list item with a description and a child list of workarounds
     * description must start with "{id}: "
@@ -147,6 +152,12 @@ Notes:
 ## Items
 
 * Prefer `pub` instead of `pub(crate)` or private.
+
+## Layout
+
+* Generic helper functions must be in `src/functions` folder
+
+The general layout guidelines may be overridden by more specific layout guidelines below.
 
 ## Types
 
