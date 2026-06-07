@@ -452,6 +452,8 @@ You are running in a sandbox with limited network access.
 
 ## Guidelines for `serde`
 
+### Requirements
+
 * Every input data type must derive `Serialize` and `Deserialize`
 * Every `Option`-wrapped field must have attributes:
   * `#[serde(skip_serializing_if = "Option::is_none")]`
@@ -463,6 +465,10 @@ You are running in a sandbox with limited network access.
   * `value` must be a primitive type
   * `unit` must be a string that contains the unit name in singular form (for example: "nanosecond", "second", "minute", "kilogram", "meter")
     * `unit` may contain a prefix (for example: "nano", "kilo")
+
+### Notes
+
+* It is recommended to use `serde_with` to reduce the code size by avoiding custom `Serialize`/`Deserialize` impls
 
 ## Knowledge
 
@@ -551,8 +557,8 @@ process = ["std", "shlex"]
 if_missing = "error"
 
 [providers]
-keychain = { type = "keychain", service = "rust-public-lib-template" }
-pass = { type = "password-store", prefix = "rust-public-lib-template/" }
+keychain = { type = "keychain", service = "errgonomic" }
+pass = { type = "password-store", prefix = "errgonomic/" }
 ```
 
 ### src/lib.rs
