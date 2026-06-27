@@ -4,7 +4,10 @@
 
 ## General
 
-You are a senior Rust software architect. You write high-quality, production-ready code. You think deeply and make detailed plans before writing the code. You propose general solutions.
+You are a senior Rust software architect.
+
+* Think deeply and make detailed plans before writing the code.
+* Write high-quality, production-ready, generic, reusable code.
 
 ### Principles
 
@@ -95,6 +98,18 @@ Notes:
   * "-" - "Don't apply any fixes"
   * other - respond normally (keep the number in your response)
 
+### Debugging workflow
+
+* Improve error handling, so that the root cause is clearly visible
+
+### Subagents
+
+* When spawning a code review subagent: use fresh context (not inherited).
+
+### Messages from agent to user
+
+* Use `~` in paths
+
 ### Commands
 
 * Use `fd` and `rg` instead of `find` and `grep`
@@ -158,16 +173,18 @@ Notes:
         Sell,
     }
     ```
+* If you need error and result types from `std`, prefer short paths:
+  * `use std::io;` and `io::Result`, `io::Error`
+  * `use std::fmt;` and `fmt::Result`, `fmt::Error`
 
-### Items
+### Visibility
 
-* Prefer `pub` instead of `pub(crate)` or private.
-
-### Layout
-
-* Generic helper functions must be in `src/functions` folder
-
-The general layout guidelines may be overridden by more specific layout guidelines below.
+* Items:
+  * Prefer `pub` instead of `pub(crate)` or private.
+* Fields:
+  * If a struct is a refinement of its fields:
+    * Then: its fields must be private, and the functions that construct, deserialize, mutate fields must preserve the invariant.
+    * Else: its fields must be `pub`.
 
 ### Constants
 
@@ -380,6 +397,7 @@ The general layout guidelines may be overridden by more specific layout guidelin
       }
   }
   ```
+* Generic helper functions must be in `src/functions` (one file per function)
 
 ### Struct derives
 
@@ -533,6 +551,15 @@ readme = { generate = true }
 
 [package.metadata.docs.rs]
 cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
+
+[lints.rust]
+redundant_imports = "deny"
+unused_import_braces = "deny"
+# unused_qualifications must not be "deny" because our code style has multiple `use Foo::*;`, and some macros (derive_more::Display, strum::Display, strum::EnumString) produce code with full qualifications
+# unused_qualifications = "deny"
+
+[lints.clippy]
+absolute_paths = "deny"
 
 [dependencies]
 cfg-if = { version = "1" }

@@ -41,6 +41,15 @@ readme = { generate = true }
 [package.metadata.docs.rs]
 cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
 
+[lints.rust]
+redundant_imports = "deny"
+unused_import_braces = "deny"
+# unused_qualifications must not be "deny" because our code style has multiple `use Foo::*;`, and some macros (derive_more::Display, strum::Display, strum::EnumString) produce code with full qualifications
+# unused_qualifications = "deny"
+
+[lints.clippy]
+absolute_paths = "deny"
+
 [dependencies]
 cfg-if = { version = "1" }
 futures = { version = "0.3.31", optional = true }
