@@ -1,11 +1,11 @@
 use crate::{ErrorDisplayer, WriteToNamedTempFileError, map_err, write_to_named_temp_file};
 use core::error::Error;
-use core::fmt::Formatter;
+use core::fmt::{self, Formatter};
 use std::io;
 use std::io::{Write, stderr};
 
 /// Writes a human-readable error trace to the provided formatter.
-pub fn writeln_error_to_formatter<E: Error + ?Sized>(error: &E, f: &mut Formatter<'_>) -> core::fmt::Result {
+pub fn writeln_error_to_formatter<E: Error + ?Sized>(error: &E, f: &mut Formatter<'_>) -> fmt::Result {
     use std::fmt::Write;
     write!(f, "- {error}")?;
     if let Some(source_new) = error.source() {
@@ -87,6 +87,7 @@ mod tests {
     use pretty_assertions::assert_eq;
     use std::error::Error;
     use thiserror::Error;
+    use tokio::io::{Error as TokioIoError, ErrorKind as TokioIoErrorKind};
 
     #[test]
     fn must_write_error() {
@@ -104,7 +105,7 @@ mod tests {
                         },
                         I18nRequestFailed {
                             source: RequestSendFailed {
-                                source: tokio::io::Error::new(tokio::io::ErrorKind::AddrNotAvailable, "server at 239.143.73.1 did not respond"),
+                                source: TokioIoError::new(TokioIoErrorKind::AddrNotAvailable, "server at 239.143.73.1 did not respond"),
                             },
                             row: Row::new("Bar"),
                         },
@@ -180,7 +181,7 @@ mod tests {
         #[error("failed to construct a JSON schema")]
         JsonSchemaNewFailed { source: JsonSchemaNewError },
         #[error("failed to send a request")]
-        RequestSendFailed { source: tokio::io::Error },
+        RequestSendFailed { source: TokioIoError },
     }
 
     #[derive(Error, Debug)]

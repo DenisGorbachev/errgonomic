@@ -1,7 +1,6 @@
 use crate::ErrorDisplayer;
 use core::error::Error;
-use core::fmt::{Debug, Write};
-use core::fmt::{Display, Formatter};
+use core::fmt::{self, Debug, Display, Formatter, Write};
 use core::ops::{Deref, DerefMut};
 
 /// An owned collection of errors
@@ -15,7 +14,7 @@ impl<E: Error> ErrVec<E> {
 }
 
 impl<E: Error> Display for ErrVec<E> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "encountered {len} errors", len = self.len())?;
         self.0.iter().try_for_each(|error| {
             f.write_char('\n')?;

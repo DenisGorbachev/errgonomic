@@ -1,11 +1,11 @@
 use crate::writeln_error_to_formatter;
-use core::fmt::{Display, Formatter};
+use core::fmt::{self, Display, Formatter};
 use std::error::Error;
 
 pub struct ErrorDisplayer<'a, E: ?Sized>(pub &'a E);
 
 impl<E: Error + ?Sized> Display for ErrorDisplayer<'_, E> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         writeln_error_to_formatter(self.0, f)
     }
 }

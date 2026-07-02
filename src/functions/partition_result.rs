@@ -1,9 +1,7 @@
+#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
-/// Collects `Ok` values unless at least one `Err` is encountered.
-///
-/// This is optimized for `handle_iter!`: once an error appears, previously
-/// collected `Ok` values are dropped and further `Ok` values are ignored.
+/// PRUNING: drops collected `Ok` values and ignores later `Ok` values after the first `Err`, because `handle_iter!` only returns errors when any item fails.
 #[doc(hidden)]
 pub fn partition_result<T, E>(results: impl IntoIterator<Item = Result<T, E>>) -> Result<Vec<T>, Vec<E>> {
     let iter = results.into_iter();
