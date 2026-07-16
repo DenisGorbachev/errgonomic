@@ -94,6 +94,33 @@ const includeFile = async (path: string) => {
   return await renderFileContents(path, contents)
 }
 
+const includeAllFiles = async (fileName: string) => {
+  const decoder = new TextDecoder()
+  const command = new Deno.Command("fd", {
+    args: [
+      "--type",
+      "file",
+      "--glob",
+      fileName,
+      "--print0",
+      "--strip-cwd-prefix",
+    ],
+    stdout: "piped",
+    stderr: "piped",
+    cwd: fromFileUrl(rootUrl),
+  })
+  const output = await command.output()
+  if (!output.success) {
+    const stderr = decoder.decode(output.stderr).trim()
+    throw new Error(
+      `fd failed while finding '${fileName}'${stderr ? `: ${stderr}` : ""}`,
+    )
+  }
+  const paths = decoder.decode(output.stdout).split("\0").filter((path) => path.length > 0).sort()
+  const files = await Promise.all(paths.map(includeFile))
+  return files.join("\n\n")
+}
+
 const renderFileContents = async (path: string, contents: string, pathToRender: string = path) => {
   if (isMarkdownPath(path)) {
     return await shiftHeadings(contents)
@@ -133,10 +160,10 @@ ${files.map(file => `* ${file}`).join("\n")}`.trim()
 type CargoMetadata = {
   packages: CargoPackage[]
   resolve: CargoResolve | null
+  workspace_members: string[]
 }
 
 type CargoResolve = {
-  root: string | null
   nodes: CargoNode[]
 }
 
@@ -190,27 +217,27 @@ const parseSemVer = (value: string) => {
   return parsed
 }
 
-const rootPackageHasDependency = (metadata: CargoMetadata, dependencyName: string) => {
+const hasDirectDependency = (metadata: CargoMetadata, dependencyName: string) => {
   const resolve = metadata.resolve
-  if (!resolve?.root) {
+  if (!resolve) {
     return false
   }
-  const rootNode = resolve.nodes.find((node) => node.id === resolve.root)
-  if (!rootNode) {
-    return false
-  }
-  return rootNode.deps.some((dep) => {
-    if (dep.name === dependencyName) {
-      return true
-    }
-    const pkg = metadata.packages.find((candidate) => candidate.id === dep.pkg)
-    return pkg?.name === dependencyName
-  })
+  const workspaceMembers = new Set(metadata.workspace_members)
+  const matchingPackages = new Set(
+    metadata.packages.filter((pkg) => pkg.name === dependencyName).map((pkg) => pkg.id),
+  )
+  return resolve.nodes.some(
+    (node) =>
+      workspaceMembers.has(node.id) &&
+      node.deps.some(
+        (dependency) => dependency.name === dependencyName || matchingPackages.has(dependency.pkg),
+      ),
+  )
 }
 
 const includeFileIfCargoDependencyExists = async (dependencyName: string, path: string) => {
   const metadata = await cargoMetadataPromise
-  if (!rootPackageHasDependency(metadata, dependencyName)) {
+  if (!hasDirectDependency(metadata, dependencyName)) {
     return null
   }
   return await includeFile(path)
@@ -270,7 +297,7 @@ const parts = (await Promise.all([
   includeFileIfExists(".agents/api.md"),
   includeFileIfExists(".agents/gotchas.md"),
   Promise.resolve("## Project files"),
-  includeFile("Cargo.toml"),
+  includeAllFiles("Cargo.toml"),
   includeFile("fnox.toml"),
   includeFileIfExists("src/main.rs"),
   includeFileIfExists("src/lib.rs"),
