@@ -88,6 +88,10 @@ This will produce a nice "error trace" like below:
 cargo add errgonomic
 ```
 
+## Other packages
+
+This workspace has no other packages.
+
 ## Gratitude
 
 Like the project? [⭐ Star this repo](https://github.com/DenisGorbachev/errgonomic) on GitHub!

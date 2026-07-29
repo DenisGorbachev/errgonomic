@@ -83,7 +83,6 @@
 #![doc = "```"]
 //!
 
-#![deny(clippy::arithmetic_side_effects)]
 #![cfg_attr(not(test), deny(unused_crate_dependencies))]
 #![cfg_attr(not(feature = "std"), no_std)]
 

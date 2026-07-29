@@ -1,13 +1,13 @@
-[package]
-name = "errgonomic"
+[workspace]
+resolver = "3"
+
+[workspace.package]
 version = "0.5.1"
 edition = "2024"
 rust-version = "1.85.0"
-description = "Macros for ergonomic error handling with thiserror"
 license = "Apache-2.0 OR MIT"
 homepage = "https://github.com/DenisGorbachev/errgonomic"
 repository = "https://github.com/DenisGorbachev/errgonomic"
-readme = "README.md"
 keywords = ["error-handling", "utils", "macros"]
 categories = ["rust-patterns", "development-tools", "development-tools::debugging", "no-std"]
 exclude = [
@@ -23,7 +23,6 @@ exclude = [
     "deno.json",
     "commitlint.config.mjs",
     "fnox.toml",
-    "lefthook.yml",
     "mise.toml",
     "rumdl.toml",
     "rustfmt.toml",
@@ -31,24 +30,42 @@ exclude = [
 ]
 # "internal" dir should be included
 
-[package.metadata.details]
+[workspace.metadata.details]
+name = "errgonomic"
 title = "Errgonomic"
-tagline = ""
-summary = ""
-announcement = ""
 readme = { generate = true }
 
-[package.metadata.docs.rs]
-cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
-
-[lints.rust]
+[workspace.lints.rust]
 redundant_imports = "deny"
 unused_import_braces = "deny"
 # unused_qualifications must not be "deny" because our code style has multiple `use Foo::*;`, and some macros (derive_more::Display, strum::Display, strum::EnumString) produce code with full qualifications
 # unused_qualifications = "deny"
 
-[lints.clippy]
+[workspace.lints.clippy]
 absolute_paths = "deny"
+arithmetic_side_effects = "deny"
+
+[package]
+name = "errgonomic"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Macros for ergonomic error handling with thiserror."
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+exclude.workspace = true
+
+[package.metadata.details]
+title = "Errgonomic"
+
+[package.metadata.docs.rs]
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
+
+[lints]
+workspace = true
 
 [dependencies]
 cfg-if = { version = "1" }
@@ -69,4 +86,3 @@ toml = "0.9"
 default = ["std"]
 std = ["tempfile", "thiserror/std"]
 process = ["std", "shlex"]
-
