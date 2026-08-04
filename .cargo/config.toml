@@ -1,0 +1,2 @@
+# Shared Cargo configuration belongs in this tracked file.
+# Temporary path-based dependency overrides must be removed before validation or commits.
