@@ -120,7 +120,7 @@ depends = ["fix:code:warnings"]
 run = "cargo fmt --all"
 
 [tasks."fix:docs"]
-depends = ["fix:agents", "fix:readme"]
+depends = ["fix:agents", "fix:readme", "gen:docs"]
 # use `rumdl check --fix` instead of `rumdl fmt` because `rumdl check --fix` exits with 1 if errors remain (since v0.1.0)
 run = "rumdl check --fix"
 
@@ -128,6 +128,11 @@ run = "rumdl check --fix"
 # "fix:agents" depends on "fix:code" because it reads the code files
 depends = ["fix:name", "fix:configs", "fix:code"]
 run = [{ task = "gen:agents" }]
+
+[tasks."gen:docs"]
+# DOCS.md includes code files, so wait for concurrent code fixes without making them a prerequisite for direct generation.
+wait_for = ["fix:code"]
+run = [{ task = "repomix", args = ["DOCS.md"] }]
 
 [tasks."gen:readme"]
 run = "./README.ts"
