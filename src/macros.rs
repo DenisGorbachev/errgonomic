@@ -200,10 +200,14 @@ macro_rules! _index_err_async {
 #[cfg(all(test, feature = "std"))]
 mod tests {
     use crate::{ErrVec, ItemError, PathBufDisplay};
+    use alloc::boxed::Box;
+    use alloc::string::String;
+    use alloc::vec::Vec;
     use futures::future::join_all;
     use serde::{Deserialize, Serialize};
     use std::io;
     use std::path::{Path, PathBuf};
+    use std::println;
     use std::str::FromStr;
     use std::sync::{Arc, RwLock};
     use thiserror::Error;

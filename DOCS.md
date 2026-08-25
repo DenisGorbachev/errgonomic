@@ -236,7 +236,6 @@ pub fn get_root_source(error: &dyn Error) -> &dyn Error {
 ## File: src/functions/partition_result.rs
 
 ````rust
-#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
 /// PRUNING: drops collected `Ok` values and ignores later `Ok` values after the first `Err`, because `handle_iter!` only returns errors when any item fails.
@@ -268,6 +267,8 @@ pub fn partition_result<T, E>(results: impl IntoIterator<Item = Result<T, E>>) -
 ## File: src/functions/render_command.rs
 
 ````rust
+use alloc::string::String;
+use alloc::vec::Vec;
 use core::iter::once;
 use std::process::Command;
 
@@ -323,8 +324,10 @@ pub enum WriteToNamedTempFileError {
 
 ````rust
 use crate::{ErrorDisplayer, WriteToNamedTempFileError, map_err, write_to_named_temp_file};
+use alloc::format;
 use core::error::Error;
 use core::fmt::{self, Formatter};
+use std::eprintln;
 use std::io;
 use std::io::{Write, stderr};
 
@@ -408,7 +411,10 @@ mod tests {
     use I18nUpdateRunError::*;
     use JsonValueNewError::*;
     use UpdateRowError::*;
+    use alloc::string::{String, ToString};
+    use alloc::vec;
     use pretty_assertions::assert_eq;
+    use std::eprintln;
     use std::error::Error;
     use thiserror::Error;
     use tokio::io::{Error as TokioIoError, ErrorKind as TokioIoErrorKind};
@@ -472,7 +478,7 @@ mod tests {
         let mut actual = String::new();
         let displayer = ErrorDisplayer(error);
         writeln!(actual, "{displayer}").unwrap();
-        eprintln!("{}", actual);
+        eprintln!("{actual}");
         assert_eq!(actual, expected)
     }
 
@@ -598,6 +604,8 @@ impl<T: Debug> From<T> for DisplayAsDebug<T> {
 
 ````rust
 use crate::ErrorDisplayer;
+use alloc::format;
+use alloc::vec::Vec;
 use core::error::Error;
 use core::fmt::{self, Debug, Display, Formatter, Write};
 use core::ops::{Deref, DerefMut};
@@ -836,10 +844,12 @@ cfg_if::cfg_if! {
 //!
 
 #![cfg_attr(not(test), deny(unused_crate_dependencies))]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
 extern crate alloc;
 extern crate core;
+#[cfg(feature = "std")]
+extern crate std;
 
 mod macros;
 
@@ -1060,10 +1070,14 @@ macro_rules! _index_err_async {
 #[cfg(all(test, feature = "std"))]
 mod tests {
     use crate::{ErrVec, ItemError, PathBufDisplay};
+    use alloc::boxed::Box;
+    use alloc::string::String;
+    use alloc::vec::Vec;
     use futures::future::join_all;
     use serde::{Deserialize, Serialize};
     use std::io;
     use std::path::{Path, PathBuf};
+    use std::println;
     use std::str::FromStr;
     use std::sync::{Arc, RwLock};
     use thiserror::Error;

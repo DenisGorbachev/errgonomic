@@ -1,3 +1,4 @@
+use alloc::string::String;
 use thiserror::Error;
 
 pub fn foo_bundled(input: String) -> Result<u32, FooError> {

@@ -1,6 +1,8 @@
 use crate::{ErrorDisplayer, WriteToNamedTempFileError, map_err, write_to_named_temp_file};
+use alloc::format;
 use core::error::Error;
 use core::fmt::{self, Formatter};
+use std::eprintln;
 use std::io;
 use std::io::{Write, stderr};
 
@@ -84,7 +86,10 @@ mod tests {
     use I18nUpdateRunError::*;
     use JsonValueNewError::*;
     use UpdateRowError::*;
+    use alloc::string::{String, ToString};
+    use alloc::vec;
     use pretty_assertions::assert_eq;
+    use std::eprintln;
     use std::error::Error;
     use thiserror::Error;
     use tokio::io::{Error as TokioIoError, ErrorKind as TokioIoErrorKind};

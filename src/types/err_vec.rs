@@ -1,4 +1,6 @@
 use crate::ErrorDisplayer;
+use alloc::format;
+use alloc::vec::Vec;
 use core::error::Error;
 use core::fmt::{self, Debug, Display, Formatter, Write};
 use core::ops::{Deref, DerefMut};

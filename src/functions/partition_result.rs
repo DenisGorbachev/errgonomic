@@ -1,4 +1,3 @@
-#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 
 /// PRUNING: drops collected `Ok` values and ignores later `Ok` values after the first `Err`, because `handle_iter!` only returns errors when any item fails.
