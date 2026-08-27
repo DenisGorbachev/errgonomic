@@ -1,6 +1,6 @@
 # Error handling
 
-## Princicle
+## Principle
 
 Every fallible function must return an error with enough data for the caller to retry the call.
 

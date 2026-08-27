@@ -549,7 +549,7 @@ Notes:
 
 ### Error handling
 
-#### Princicle
+#### Principle
 
 Every fallible function must return an error with enough data for the caller to retry the call.
 
@@ -863,6 +863,7 @@ run = """
 set -xeuo pipefail
 dir=$MISE_PROJECT_ROOT
 file=$usage_file
+eval "rest=(${usage_rest-})"
 # header=$(taplo get -f "$dir/Cargo.toml" "package.description")
 
 cp $dir/internal/guidelines.md "$file"
@@ -876,7 +877,7 @@ repomix \
     --no-directory-structure \
     --no-git-sort-by-changes \
     --stdout \
-    {{arg(name="rest")}} \
+    "${rest[@]}" \
     "$@" \
     $dir \
     >> "$file"
