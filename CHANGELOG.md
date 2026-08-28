@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2](https://github.com/DenisGorbachev/errgonomic/compare/v0.5.1...v0.5.2) - 2026-08-28
+
+### Fixed
+
+- AGENTS
+- CargoMetadata
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- support
+- README
+- refactor to support workspaces
+- update errgonomic
+- update errgonomic
+- clippy
+- clippy
+- general
+- Cargo
+- absolute_paths
+- Cargo
+- bump Rust version
+- AGENTS
+- AGENTS
+- clippy::arithmetic_side_effects
+- AGENTS
+- fnox
+- mv yolobox .yolobox
+- configure deno not to put modules under node_modules
+- idiomatic_version_file_enable_tools
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+
+### Other
+
+- Merge remote-tracking branch 'repoconf-rust-public-lib-template/main'
+
 ## [0.5.1](https://github.com/DenisGorbachev/errgonomic/compare/v0.5.0...v0.5.1) - 2026-02-16
 
 ### Fixed
