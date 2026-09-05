@@ -114,7 +114,7 @@ depends = ["fix:code:warnings"]
 run = "cargo fmt --all"
 
 [tasks."fix:docs"]
-depends = ["fix:agents", "fix:readme", "gen:docs"]
+depends = ["fix:agents", "fix:readme"]
 # use `rumdl check --fix` instead of `rumdl fmt` because `rumdl check --fix` exits with 1 if errors remain (since v0.1.0)
 run = "rumdl check --fix"
 
@@ -124,14 +124,15 @@ depends = ["fix:name", "fix:configs", "fix:code"]
 run = [{ task = "gen:agents" }]
 
 [tasks."gen:docs"]
-# DOCS.md includes code files, so wait for concurrent code fixes without making them a prerequisite for direct generation.
+# internal/repomix.md includes code files, so wait for concurrent code fixes without making them a prerequisite for direct generation.
 wait_for = ["fix:code"]
-run = [{ task = "repomix", args = ["DOCS.md"] }]
+run = [{ task = "repomix", args = ["internal/repomix.md"] }]
 
 [tasks."gen:readme"]
 run = "./README.ts"
 
 [tasks."gen:agents"]
+depends = ["gen:docs"]
 run = "./AGENTS.ts"
 
 [tasks."commitlint"]
@@ -148,10 +149,9 @@ set -xeuo pipefail
 dir=$MISE_PROJECT_ROOT
 file=$usage_file
 eval "rest=(${usage_rest-})"
-# header=$(taplo get -f "$dir/Cargo.toml" "package.description")
 
-cp $dir/internal/guidelines.md "$file"
-echo "" >> "$file"
+temporary_file=$(mktemp "${file}.XXXXXX")
+trap 'rm -f "$temporary_file"' EXIT
 # `--no-git-sort-by-changes` stabilizes file order across invocations
 repomix \
     --include "src,tests,examples" \
@@ -163,8 +163,10 @@ repomix \
     --stdout \
     "${rest[@]}" \
     "$@" \
-    $dir \
-    >> "$file"
+    "$dir" \
+    > "$temporary_file"
+chmod 644 "$temporary_file"
+mv "$temporary_file" "$file"
 """
 
 [tasks."agent:docs:list"]
