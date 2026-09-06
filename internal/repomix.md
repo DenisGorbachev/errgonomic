@@ -649,7 +649,7 @@ cfg_if::cfg_if! {
 //!
 //! * `parse_config_v2` is longer
 //!
-//! That means `parse_config_v2` is strictly better but requires writing more code. However, with LLMs, writing more code is not an issue. Therefore, it's better to use a more verbose approach `v2`, which provides you with better errors.
+//! That means `parse_config_v2` is strictly better but requires writing more code. However, with LLMs, writing more code is not an issue. Therefore, it's better to use a more verbose approach `v2`, which provides better errors.
 //!
 //! This crates provides the `handle` family of macros to simplify the error handling code.
 //!
