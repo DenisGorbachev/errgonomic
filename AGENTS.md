@@ -726,6 +726,7 @@ A string that is empty or contains only whitespace characters.
 ### Files
 
 #### File: src/functions/exit.rs
+
 ````rust
 use crate::eprintln_error;
 use std::error::Error;
@@ -781,6 +782,7 @@ pub async fn exit_stream_of_results_print_first<E: Error>(stream: impl Stream<It
 ````
 
 #### File: src/functions/get_root_error.rs
+
 ````rust
 use core::error::Error;
 
@@ -795,6 +797,7 @@ pub fn get_root_source(error: &dyn Error) -> &dyn Error {
 ````
 
 #### File: src/functions/partition_result.rs
+
 ````rust
 use alloc::vec::Vec;
 
@@ -825,6 +828,7 @@ pub fn partition_result<T, E>(results: impl IntoIterator<Item = Result<T, E>>) -
 ````
 
 #### File: src/functions/render_command.rs
+
 ````rust
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -844,6 +848,7 @@ pub fn render_command(command: &Command) -> String {
 ````
 
 #### File: src/functions/write_to_named_temp_file.rs
+
 ````rust
 use crate::{handle, map_err};
 use std::fs::File;
@@ -879,6 +884,7 @@ pub enum WriteToNamedTempFileError {
 ````
 
 #### File: src/functions/writeln_error.rs
+
 ````rust
 use crate::{ErrorDisplayer, WriteToNamedTempFileError, map_err, write_to_named_temp_file};
 use alloc::format;
@@ -1101,6 +1107,7 @@ mod tests {
 ````
 
 #### File: src/types/debug_as_display.rs
+
 ````rust
 use core::fmt::{self, Debug, Display, Formatter};
 
@@ -1132,6 +1139,7 @@ impl<T: Display> From<T> for DebugAsDisplay<T> {
 ````
 
 #### File: src/types/display_as_debug.rs
+
 ````rust
 use core::fmt::{self, Debug, Display, Formatter};
 
@@ -1156,6 +1164,7 @@ impl<T: Debug> From<T> for DisplayAsDebug<T> {
 ````
 
 #### File: src/types/err_vec.rs
+
 ````rust
 use crate::ErrorDisplayer;
 use alloc::format;
@@ -1234,6 +1243,7 @@ impl<E: Error + Clone> From<&[E]> for ErrVec<E> {
 ````
 
 #### File: src/types/error_displayer.rs
+
 ````rust
 use crate::writeln_error_to_formatter;
 use core::fmt::{self, Display, Formatter};
@@ -1255,6 +1265,7 @@ impl<'a, E: Error + ?Sized> From<&'a E> for ErrorDisplayer<'a, E> {
 ````
 
 #### File: src/types/item_error.rs
+
 ````rust
 use thiserror::Error;
 
@@ -1270,6 +1281,7 @@ pub struct ItemError<T, E> {
 ````
 
 #### File: src/types/path_buf_display.rs
+
 ````rust
 use crate::DisplayAsDebug;
 use std::path::PathBuf;
@@ -1279,6 +1291,7 @@ pub type PathBufDisplay = DisplayAsDebug<PathBuf>;
 ````
 
 #### File: src/functions.rs
+
 ````rust
 mod get_root_error;
 mod partition_result;
@@ -1306,6 +1319,7 @@ cfg_if::cfg_if! {
 ````
 
 #### File: src/lib.rs
+
 ````rust
 //! Macros for ergonomic error handling with [thiserror](https://crates.io/crates/thiserror).
 //!
@@ -1415,6 +1429,7 @@ mod drafts;
 ````
 
 #### File: src/macros.rs
+
 ````rust
 /// [`handle!`](crate::handle) is a better alternative to [`map_err`](Result::map_err) because it doesn't capture any variables from the environment if the result is [`Ok`], only when the result is [`Err`].
 /// By contrast, a closure passed to `map_err` always captures the variables from environment, regardless of whether the result is [`Ok`] or [`Err`]
@@ -1957,6 +1972,7 @@ mod tests {
 ````
 
 #### File: src/types.rs
+
 ````rust
 mod debug_as_display;
 mod display_as_debug;
@@ -2109,7 +2125,7 @@ depends = ["fix:code:warnings"]
 run = "cargo fmt --all"
 
 [tasks."fix:docs"]
-depends = ["fix:agents", "fix:readme"]
+depends = ["fix:agents", "fix:readme", "gen:docs"]
 # use `rumdl check --fix` instead of `rumdl fmt` because `rumdl check --fix` exits with 1 if errors remain (since v0.1.0)
 run = "rumdl check --fix"
 
@@ -2127,7 +2143,6 @@ run = [{ task = "repomix", args = ["internal/repomix.md"] }]
 run = "./README.ts"
 
 [tasks."gen:agents"]
-depends = ["gen:docs"]
 run = "./AGENTS.ts"
 
 [tasks."commitlint"]

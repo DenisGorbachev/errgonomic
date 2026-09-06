@@ -114,7 +114,7 @@ depends = ["fix:code:warnings"]
 run = "cargo fmt --all"
 
 [tasks."fix:docs"]
-depends = ["fix:agents", "fix:readme"]
+depends = ["fix:agents", "fix:readme", "gen:docs"]
 # use `rumdl check --fix` instead of `rumdl fmt` because `rumdl check --fix` exits with 1 if errors remain (since v0.1.0)
 run = "rumdl check --fix"
 
@@ -132,7 +132,6 @@ run = [{ task = "repomix", args = ["internal/repomix.md"] }]
 run = "./README.ts"
 
 [tasks."gen:agents"]
-depends = ["gen:docs"]
 run = "./AGENTS.ts"
 
 [tasks."commitlint"]
