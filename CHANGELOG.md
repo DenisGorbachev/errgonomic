@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4](https://github.com/DenisGorbachev/errgonomic/compare/v0.5.3...v0.5.4) - 2026-09-18
+
+### Fixed
+
+- install-hooks
+
+### Other
+
+- *(deps)* update errgonomic to 0.5.3
+
 ## [0.5.3](https://github.com/DenisGorbachev/errgonomic/compare/v0.5.2...v0.5.3) - 2026-09-06
 
 ### Fixed
