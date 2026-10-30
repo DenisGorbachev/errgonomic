@@ -1,5 +1,6 @@
 use crate::{ErrorDisplayer, WriteToNamedTempFileError, map_err, write_to_named_temp_file};
 use alloc::format;
+use alloc::string::ToString;
 use core::error::Error;
 use core::fmt::{self, Formatter};
 use std::eprintln;
@@ -18,9 +19,7 @@ pub fn writeln_error_to_formatter<E: Error + ?Sized>(error: &E, f: &mut Formatte
     }
 }
 
-/// Writes a human-readable error trace to the provided writer and persists the full debug output to a temp file.
-///
-/// This is useful for CLI tools that want a concise error trace on stderr and a path to a full report.
+/// Writes the error trace and saves its debug report through [`write_to_named_temp_file`].
 pub fn writeln_error_to_writer_and_file<E: Error>(error: &E, writer: &mut dyn Write) -> Result<(), WritelnErrorToWriterAndFileError> {
     use WritelnErrorToWriterAndFileError::*;
     let displayer = ErrorDisplayer(error);
@@ -35,7 +34,7 @@ pub fn writeln_error_to_writer_and_file<E: Error>(error: &E, writer: &mut dyn Wr
                 map_err!(writeln!(writer, "{}", path_buf.display()), WriteFailed)?;
             } else {
                 // assuming `less` is available
-                map_err!(writeln!(writer, "less {}", path_buf.display()), WriteFailed)?;
+                map_err!(writeln!(writer, "less '{}'", path_buf.display().to_string().replace('\'', "'\\''")), WriteFailed)?;
             }
             Ok(())
         }
