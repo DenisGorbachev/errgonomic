@@ -88,5 +88,5 @@ toml = "0.9"
 
 [features]
 default = ["std"]
-std = ["tempfile", "thiserror/std"]
-process = ["std", "shlex"]
+std = ["tempfile", "thiserror/std", "shlex"]
+process = ["std"]

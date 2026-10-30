@@ -841,8 +841,6 @@ use tempfile::{NamedTempFile, PersistError};
 use thiserror::Error;
 
 /// Persists the buffer in `ERRGONOMIC_DIR`, or the system temporary directory when unset.
-///
-/// Returns the persisted file handle and its path.
 pub fn write_to_named_temp_file(buf: &[u8]) -> Result<(File, PathBuf), WriteToNamedTempFileError> {
     use WriteToNamedTempFileError::*;
     let dir = var_os("ERRGONOMIC_DIR")
@@ -874,13 +872,16 @@ pub enum WriteToNamedTempFileError {
 ##### File: src/functions/writeln_error.rs
 
 ````rust
-use crate::{ErrorDisplayer, WriteToNamedTempFileError, map_err, write_to_named_temp_file};
+use crate::{ErrorDisplayer, WriteToNamedTempFileError, handle, map_err, write_to_named_temp_file};
 use alloc::format;
 use core::error::Error;
 use core::fmt::{self, Formatter};
+use shlex::QuoteError;
+use shlex::bytes::try_quote;
 use std::eprintln;
 use std::io;
 use std::io::{Write, stderr};
+use std::path::PathBuf;
 
 /// Writes a human-readable error trace to the provided formatter.
 pub fn writeln_error_to_formatter<E: Error + ?Sized>(error: &E, f: &mut Formatter<'_>) -> fmt::Result {
@@ -894,9 +895,7 @@ pub fn writeln_error_to_formatter<E: Error + ?Sized>(error: &E, f: &mut Formatte
     }
 }
 
-/// Writes a human-readable error trace to the provided writer and persists the full debug output to a temp file.
-///
-/// This is useful for CLI tools that want a concise error trace on stderr and a path to a full report.
+/// Writes the error trace and saves its debug report through [`write_to_named_temp_file`].
 pub fn writeln_error_to_writer_and_file<E: Error>(error: &E, writer: &mut dyn Write) -> Result<(), WritelnErrorToWriterAndFileError> {
     use WritelnErrorToWriterAndFileError::*;
     let displayer = ErrorDisplayer(error);
@@ -910,8 +909,10 @@ pub fn writeln_error_to_writer_and_file<E: Error>(error: &E, writer: &mut dyn Wr
             if cfg!(windows) {
                 map_err!(writeln!(writer, "{}", path_buf.display()), WriteFailed)?;
             } else {
-                // assuming `less` is available
-                map_err!(writeln!(writer, "less {}", path_buf.display()), WriteFailed)?;
+                let path = handle!(try_quote(path_buf.as_os_str().as_encoded_bytes()), TryQuoteFailed, path: path_buf);
+                handle!(writer.write_all(b"less -- "), WriteFailed);
+                handle!(writer.write_all(&path), WriteFailed);
+                handle!(writeln!(writer), WriteFailed);
             }
             Ok(())
         }
@@ -931,6 +932,8 @@ pub enum WritelnErrorToWriterAndFileError {
     WriteFailed { source: io::Error },
     #[error("failed to write the full error report")]
     WriteToNamedTempFileFailed { source: WriteToNamedTempFileError },
+    #[error("failed to shell-quote error report path '{path}'", path = path.display())]
+    TryQuoteFailed { source: QuoteError, path: PathBuf },
 }
 
 /// Writes an error trace to stderr and, if possible, includes a path to the full error report.
@@ -949,6 +952,11 @@ where
         Err(WriteToNamedTempFileFailed {
             source,
         }) => eprintln!("failed to write the error to the report file: {source:#?}"),
+        Err(
+            error @ TryQuoteFailed {
+                ..
+            },
+        ) => eprintln!("{error:#?}"),
     }
 }
 
@@ -2328,8 +2336,8 @@ toml = "0.9"
 
 [features]
 default = ["std"]
-std = ["tempfile", "thiserror/std"]
-process = ["std", "shlex"]
+std = ["tempfile", "thiserror/std", "shlex"]
+process = ["std"]
 ```
 
 ### src/lib.rs

@@ -166,14 +166,16 @@ pub enum WriteToNamedTempFileError {
 ## File: src/functions/writeln_error.rs
 
 ````rust
-use crate::{ErrorDisplayer, WriteToNamedTempFileError, map_err, write_to_named_temp_file};
+use crate::{ErrorDisplayer, WriteToNamedTempFileError, handle, map_err, write_to_named_temp_file};
 use alloc::format;
-use alloc::string::ToString;
 use core::error::Error;
 use core::fmt::{self, Formatter};
+use shlex::QuoteError;
+use shlex::bytes::try_quote;
 use std::eprintln;
 use std::io;
 use std::io::{Write, stderr};
+use std::path::PathBuf;
 
 /// Writes a human-readable error trace to the provided formatter.
 pub fn writeln_error_to_formatter<E: Error + ?Sized>(error: &E, f: &mut Formatter<'_>) -> fmt::Result {
@@ -201,8 +203,10 @@ pub fn writeln_error_to_writer_and_file<E: Error>(error: &E, writer: &mut dyn Wr
             if cfg!(windows) {
                 map_err!(writeln!(writer, "{}", path_buf.display()), WriteFailed)?;
             } else {
-                // assuming `less` is available
-                map_err!(writeln!(writer, "less '{}'", path_buf.display().to_string().replace('\'', "'\\''")), WriteFailed)?;
+                let path = handle!(try_quote(path_buf.as_os_str().as_encoded_bytes()), TryQuoteFailed, path: path_buf);
+                handle!(writer.write_all(b"less -- "), WriteFailed);
+                handle!(writer.write_all(&path), WriteFailed);
+                handle!(writeln!(writer), WriteFailed);
             }
             Ok(())
         }
@@ -222,6 +226,8 @@ pub enum WritelnErrorToWriterAndFileError {
     WriteFailed { source: io::Error },
     #[error("failed to write the full error report")]
     WriteToNamedTempFileFailed { source: WriteToNamedTempFileError },
+    #[error("failed to shell-quote error report path '{path}'", path = path.display())]
+    TryQuoteFailed { source: QuoteError, path: PathBuf },
 }
 
 /// Writes an error trace to stderr and, if possible, includes a path to the full error report.
@@ -229,17 +235,9 @@ pub fn eprintln_error<E>(error: &E)
 where
     E: Error,
 {
-    use WritelnErrorToWriterAndFileError::*;
     let mut stderr = stderr().lock();
-    let result = writeln_error_to_writer_and_file(error, &mut stderr);
-    match result {
-        Ok(()) => (),
-        Err(WriteFailed {
-            source,
-        }) => eprintln!("failed to write the error to stderr: {source:#?}"),
-        Err(WriteToNamedTempFileFailed {
-            source,
-        }) => eprintln!("failed to write the error to the report file: {source:#?}"),
+    if let Err(error) = writeln_error_to_writer_and_file(error, &mut stderr) {
+        eprintln!("{}", ErrorDisplayer(&error));
     }
 }
 
