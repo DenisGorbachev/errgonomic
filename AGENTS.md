@@ -548,35 +548,35 @@ Every fallible function must return an error with enough data for the caller to 
 
 #### Guidelines
 
-* Use `handle!` instead of `?` try operator to unwrap `Result` types
-* Use `handle!` instead of `Result::map_err`
-* Use `handle_opt!` instead of `?` try operator to unwrap `Option` types
-* Use `handle_opt!` instead of `Option::ok_or` and `Option::ok_or_else`
-* Use `handle_bool!` instead of `if condition { return Err(...) }` to return an error if some condition is true
-* Use `handle_iter!` or `handle_iter_of_refs!` to collect and return errors from iterators
-* Use `handle_into_iter!` to handle errors in collections that implement `IntoIterator` (including `Vec` and `HashMap`)
-* Calls to macros that begin with `handle` must not contain calls to `clone` (must not contain `.clone()`)
-  * Rationale: there is no need to clone the variables because the macros consume them only in the error branch, and the error branch contains a `return` statement. The variables are not consumed in the success branch, so you can always use them in the subsequent code.
-* Don't convert a `Result` into an `Option`, always propagate the error up the call stack
-* Don't use `unwrap` or `expect`
-* Don't return strings as errors
-* Every fallible function must return a unique error type, even if it contains only one fallible expression
-* Every call to another fallible function must be wrapped in a unique error enum variant
-* Every fallible function body must begin with `use ThisFunctionError::*;`, where `ThisFunctionError` must be the name of this function's error enum (for example: `use ParseConfigError::*;`)
-* Every fallible function body must use the error enum variant names without the error enum name prefix (for example: `ReadFileFailed` instead of `ParseConfigError::ReadFileFailed`)
-* Every error type must be an enum
-* Every error type must derive `Error` via `thiserror` v2
-* Every error type must be located in the same file as the function that returns it below other non-mod items
-* Every error enum variant must be a struct variant
-* Every error enum variant must contain one field per owned variable that is relevant to the fallible expression that this variant wraps
-  * The relevant variable is a variable whose value determines whether the fallible expression returns an `Ok` or an `Err`
-* Every error enum variant must have fields only for [`data types`](#data-type), not for [`non-data types`](#non-data-type)
-* Every error enum variant must have an `#[error]` attribute
-  * The `#[error]` attribute must contain the error message displayed for the user
-  * The `#[error]` attribute must not contain the `source` field
-  * The `#[error]` attribute should contain only those fields that can be displayed on one line
-  * If the `#[error]` attribute contains fields that implement `Display`, then those fields must be output using `Display` formatting (not `Debug` formatting)
-    * Good:
+- Use `handle!` instead of `?` try operator to unwrap `Result` types
+- Use `handle!` instead of `Result::map_err`
+- Use `handle_opt!` instead of `?` try operator to unwrap `Option` types
+- Use `handle_opt!` instead of `Option::ok_or` and `Option::ok_or_else`
+- Use `handle_bool!` instead of `if condition { return Err(...) }` to return an error if some condition is true
+- Use `handle_iter!` or `handle_iter_of_refs!` to collect and return errors from iterators
+- Use `handle_into_iter!` to handle errors in collections that implement `IntoIterator` (including `Vec` and `HashMap`)
+- Calls to macros that begin with `handle` must not contain calls to `clone` (must not contain `.clone()`)
+  - Rationale: there is no need to clone the variables because the macros consume them only in the error branch, and the error branch contains a `return` statement. The variables are not consumed in the success branch, so you can always use them in the subsequent code.
+- Don't convert a `Result` into an `Option`, always propagate the error up the call stack
+- Don't use `unwrap` or `expect`
+- Don't return strings as errors
+- Every fallible function must return a unique error type, even if it contains only one fallible expression
+- Every call to another fallible function must be wrapped in a unique error enum variant
+- Every fallible function body must begin with `use ThisFunctionError::*;`, where `ThisFunctionError` must be the name of this function's error enum (for example: `use ParseConfigError::*;`)
+- Every fallible function body must use the error enum variant names without the error enum name prefix (for example: `ReadFileFailed` instead of `ParseConfigError::ReadFileFailed`)
+- Every error type must be an enum
+- Every error type must derive `Error` via `thiserror` v2
+- Every error type must be located in the same file as the function that returns it below other non-mod items
+- Every error enum variant must be a struct variant
+- Every error enum variant must contain one field per owned variable that is relevant to the fallible expression that this variant wraps
+  - The relevant variable is a variable whose value determines whether the fallible expression returns an `Ok` or an `Err`
+- Every error enum variant must have fields only for [`data types`](#data-type), not for [`non-data types`](#non-data-type)
+- Every error enum variant must have an `#[error]` attribute
+  - The `#[error]` attribute must contain the error message displayed for the user
+  - The `#[error]` attribute must not contain the `source` field
+  - The `#[error]` attribute should contain only those fields that can be displayed on one line
+  - If the `#[error]` attribute contains fields that implement `Display`, then those fields must be output using `Display` formatting (not `Debug` formatting)
+    - Good:
       ```rust
       #[derive(Error, Debug)]
       pub enum QueryFailed {
@@ -584,7 +584,7 @@ Every fallible function must return an error with enough data for the caller to 
           TaskNotFound { query: String }
       }
       ```
-    * Bad:
+    - Bad:
       ```rust
       #[derive(Error, Debug)]
       pub enum QueryFailed {
@@ -592,34 +592,34 @@ Every fallible function must return an error with enough data for the caller to 
           TaskNotFound { query: String }
       }
       ```
-  * If the `#[error]` attribute contains fields whose values may be rendered as [hard-to-see string](#hard-to-see-string), then those fields must be wrapped in single quotes:
-    * `name` can be rendered as hard-to-see string, so it must be wrapped in single quotes:
-      * Good: `#[error("user '{name}' not found")]`
-      * Bad: `#[error("user {name} not found")]`
-    * `len` can't be rendered as hard-to-see string, so it must not be wrapped in single quotes:
-      * Good: `#[error("failed to parse {len} responses", len = responses.len())]`
-      * Bad: `#[error("failed to parse '{len}' responses", len = responses.len())]`
-  * If the error enum variant has a field whose type is `std::process::Command` or `tokio::process::Command`, it must be rendered in the error message in backticks via `render_command` function from `errgonomic` crate (requires `process` feature)
-* If the error enum variant has a `source` field, then this field must be the first field
-* If each field of each variant of the error enum implements `Copy`, then the error enum must implement `Copy` too
-* Every error enum variant field must have an owned type (not a reference)
-* Every error enum variant field must not have a `#[from]` attribute
-* Every variable that contains secret data (the one which must not be displayed or logged, e.g. password, API key, personally identifying information) must have a type that doesn't output the underlying data in the `Debug` and `Display` impls (e.g. `secrecy::SecretBox`)
-* The code that calls a fallible function on each element of a collection should return an `impl Iterator<Item = Result<T, E>>` instead of short-circuiting on the first error
-* If Clippy outputs a `result_large_err` warning, then the large fields of the error enum must be wrapped in a `Box`
-* If an argument of callee implements `Copy`, the callee should not include it in the list of error enum variant fields (the caller must include it because of the rule to include all relevant owned variables)
-* If you see a function that returns a `Result` whose last argument is `()` (e.g. `Result<(), ()>`, `Result<T, ()>`, `Result<u32, ()>`), then you must fix the error handling in this function according to the guidelines and replace `()` with a proper error type
+  - If the `#[error]` attribute contains fields whose values may be rendered as [hard-to-see string](#hard-to-see-string), then those fields must be wrapped in single quotes:
+    - `name` can be rendered as hard-to-see string, so it must be wrapped in single quotes:
+      - Good: `#[error("user '{name}' not found")]`
+      - Bad: `#[error("user {name} not found")]`
+    - `len` can't be rendered as hard-to-see string, so it must not be wrapped in single quotes:
+      - Good: `#[error("failed to parse {len} responses", len = responses.len())]`
+      - Bad: `#[error("failed to parse '{len}' responses", len = responses.len())]`
+  - If the error enum variant has a field whose type is `std::process::Command` or `tokio::process::Command`, it must be rendered in the error message in backticks via `render_command` function from `errgonomic` crate (requires `process` feature)
+- If the error enum variant has a `source` field, then this field must be the first field
+- If each field of each variant of the error enum implements `Copy`, then the error enum must implement `Copy` too
+- Every error enum variant field must have an owned type (not a reference)
+- Every error enum variant field must not have a `#[from]` attribute
+- Every variable that contains secret data (the one which must not be displayed or logged, e.g. password, API key, personally identifying information) must have a type that doesn't output the underlying data in the `Debug` and `Display` impls (e.g. `secrecy::SecretBox`)
+- The code that calls a fallible function on each element of a collection should return an `impl Iterator<Item = Result<T, E>>` instead of short-circuiting on the first error
+- If Clippy outputs a `result_large_err` warning, then the large fields of the error enum must be wrapped in a `Box`
+- If an argument of callee implements `Copy`, the callee should not include it in the list of error enum variant fields (the caller must include it because of the rule to include all relevant owned variables)
+- If you see a function that returns a `Result` whose last argument is `()` (e.g. `Result<(), ()>`, `Result<T, ()>`, `Result<u32, ()>`), then you must fix the error handling in this function according to the guidelines and replace `()` with a proper error type
 
 ##### Naming
 
-* The name of the error enum must end with `Error` (for example: `ParseConfigError`)
-* The name of the error enum variant should end with `Failed` or `NotFound` or `Invalid` (for example: `ReadFileFailed`, `UserNotFound`, `PasswordInvalid`)
-* If the error variant name is associated with a child function call, the name of the error variant must be equal to the name of the function converted to CamelCase concatenated with `Failed` (for example: if the parent function calls `read_file`, then it should call it like this: `handle!(read_file(&path), ReadFileFailed, path)`
-* The name of the error enum must include the name of the function converted to CamelCase
-  * If the function is a freestanding function, the name of the error type must be exactly equal to the name of the function converted to CamelCase concatenated with `Error`
-  * If the function is an associated function, the name of the error type must be exactly equal to the name of the type without generics concatenated with the name of the function in CamelCase concatenated with `Error`
-  * If the error is specified as an associated type of a foreign trait with multiple functions that return this associated error type, then the name of the error type must be exactly equal to the name of the trait including generics concatenated with the name of the type for which this trait is implemented concatenated with `Error`
-* Every `impl TryFrom<A> for B` must use a special form of error handling that matches on multiple variables at once and returns a single error that contains fields for all available variables. For example:
+- The name of the error enum must end with `Error` (for example: `ParseConfigError`)
+- The name of the error enum variant should end with `Failed` or `NotFound` or `Invalid` (for example: `ReadFileFailed`, `UserNotFound`, `PasswordInvalid`)
+- If the error variant name is associated with a child function call, the name of the error variant must be equal to the name of the function converted to CamelCase concatenated with `Failed` (for example: if the parent function calls `read_file`, then it should call it like this: `handle!(read_file(&path), ReadFileFailed, path)`
+- The name of the error enum must include the name of the function converted to CamelCase
+  - If the function is a freestanding function, the name of the error type must be exactly equal to the name of the function converted to CamelCase concatenated with `Error`
+  - If the function is an associated function, the name of the error type must be exactly equal to the name of the type without generics concatenated with the name of the function in CamelCase concatenated with `Error`
+  - If the error is specified as an associated type of a foreign trait with multiple functions that return this associated error type, then the name of the error type must be exactly equal to the name of the trait including generics concatenated with the name of the type for which this trait is implemented concatenated with `Error`
+- Every `impl TryFrom<A> for B` must use a special form of error handling that matches on multiple variables at once and returns a single error that contains fields for all available variables. For example:
   ```rust
   #[derive(Getters, Clone, Debug)]
   pub struct Human {
@@ -685,9 +685,9 @@ A type that holds the actual data.
 
 Examples:
 
-* `bool`
-* `String`
-* `PathBuf`
+- `bool`
+- `String`
+- `PathBuf`
 
 ##### Non-data type
 
@@ -695,8 +695,8 @@ A type that doesn't hold the actual data.
 
 Examples:
 
-* `RestClient` doesn't point to the actual data, it only allows querying it.
-* `DatabaseConnection` doesn't hold the actual data, it only allows querying it.
+- `RestClient` doesn't point to the actual data, it only allows querying it.
+- `DatabaseConnection` doesn't hold the actual data, it only allows querying it.
 
 ##### Hard-to-see string
 
@@ -1615,13 +1615,13 @@ process = ["std"]
 //!
 //! Advantages:
 //!
-//! * `parse_config_v2` allows you to determine exactly what error has occurred
-//! * `parse_config_v2` provides you with all information needed to fix the underlying issue
-//! * `parse_config_v2` allows you to retry the call by reusing the `path` (avoiding unnecessary clones)
+//! - `parse_config_v2` allows you to determine exactly what error has occurred
+//! - `parse_config_v2` provides you with all information needed to fix the underlying issue
+//! - `parse_config_v2` allows you to retry the call by reusing the `path` (avoiding unnecessary clones)
 //!
 //! Disadvantages:
 //!
-//! * `parse_config_v2` is longer
+//! - `parse_config_v2` is longer
 //!
 //! That means `parse_config_v2` is strictly better but requires writing more code. However, with LLMs, writing more code is not an issue. Therefore, it's better to use a more verbose approach `v2`, which provides better errors.
 //!
@@ -1653,8 +1653,6 @@ process = ["std"]
 #![doc = "```text"]
 #![doc = include_str!("./functions/writeln_error/fixtures/must_write_error.txt")]
 #![doc = "```"]
-//!
-
 #![cfg_attr(not(test), deny(unused_crate_dependencies))]
 #![no_std]
 

@@ -43,13 +43,13 @@
 //!
 //! Advantages:
 //!
-//! * `parse_config_v2` allows you to determine exactly what error has occurred
-//! * `parse_config_v2` provides you with all information needed to fix the underlying issue
-//! * `parse_config_v2` allows you to retry the call by reusing the `path` (avoiding unnecessary clones)
+//! - `parse_config_v2` allows you to determine exactly what error has occurred
+//! - `parse_config_v2` provides you with all information needed to fix the underlying issue
+//! - `parse_config_v2` allows you to retry the call by reusing the `path` (avoiding unnecessary clones)
 //!
 //! Disadvantages:
 //!
-//! * `parse_config_v2` is longer
+//! - `parse_config_v2` is longer
 //!
 //! That means `parse_config_v2` is strictly better but requires writing more code. However, with LLMs, writing more code is not an issue. Therefore, it's better to use a more verbose approach `v2`, which provides better errors.
 //!
@@ -81,8 +81,6 @@
 #![doc = "```text"]
 #![doc = include_str!("./functions/writeln_error/fixtures/must_write_error.txt")]
 #![doc = "```"]
-//!
-
 #![cfg_attr(not(test), deny(unused_crate_dependencies))]
 #![no_std]
 
