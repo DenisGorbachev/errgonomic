@@ -51,7 +51,7 @@ Write code that minimizes losses:
   - Then:
     - Keep them.
     - Don't mention them.
-- If you notice incorrect code, tell me.
+- If you see a code item or spec requirement that is unnecessary or incorrect, tell me.
 - If you have to apply a workaround:
   - Then:
     - Add a comment next to workaround explaining why it is necessary.
@@ -532,13 +532,13 @@ A pkg that has a remote whose name contains `public` or `pre-public` and ends wi
 
 ### Knowledge
 
-* `Error::source` returns `Option<&(dyn Error + 'static)>`, which doesn't implement `Errgonomic`, so we can't call `Errgonomic::fmt` on it
-* The user wants to see the full error chain
-  * We must descend down the chain
-    * #options
-      * We can descend using `Error::source`
-      * We can descend using `Errgonomic::source`
-  * We can call `downcast_ref` on `dyn Error`
+- `Error::source` returns `Option<&(dyn Error + 'static)>`, which doesn't implement `Errgonomic`, so we can't call `Errgonomic::fmt` on it
+- The user wants to see the full error chain
+  - We must descend down the chain
+    - #options
+      - We can descend using `Error::source`
+      - We can descend using `Errgonomic::source`
+  - We can call `downcast_ref` on `dyn Error`
 
 ### Error handling
 
@@ -1329,7 +1329,7 @@ run = '''shuck --config "lint.source-paths = ['$HOME']" check --extend-exclude '
 run = "rumdl check"
 
 [tasks."lint:generated"]
-run = ["./AGENTS.ts", "./README.ts"]
+run = [{ task = "md:gen", args = ["AGENTS.ts"] }, { task = "md:gen", args = ["README.ts"] }]
 
 [tasks."test:code"]
 depends = ["test:code:regular", "test:code:integration"]
@@ -1392,7 +1392,7 @@ run = "cargo fmt --all"
 [tasks."fix:docs"]
 depends = ["fix:agents", "fix:readme", "gen:docs"]
 # use `rumdl check --fix` instead of `rumdl fmt` because `rumdl check --fix` exits with 1 if errors remain (since v0.1.0)
-run = "rumdl check --fix"
+run = [{ task = "lint:docs", args = ["--fix"] }]
 
 [tasks."fix:agents"]
 # "fix:agents" depends on "fix:code" because it reads the code files
@@ -1405,10 +1405,10 @@ wait_for = ["fix:code"]
 run = [{ task = "repomix", args = ["internal/repomix.md"] }]
 
 [tasks."gen:readme"]
-run = "./README.ts --fix"
+run = [{ task = "md:gen", args = ["README.ts", "--fix"] }]
 
 [tasks."gen:agents"]
-run = "./AGENTS.ts --fix"
+run = [{ task = "md:gen", args = ["AGENTS.ts", "--fix"] }]
 
 [tasks."commitlint"]
 run = "commitlint --extends \"$(mise where npm:@commitlint/config-conventional)/node_modules/@commitlint/config-conventional/lib/index.js\""
@@ -1489,7 +1489,6 @@ exclude = [
     "specs",
     "AGENTS.ts",
     "CargoMetadata.ts",
-    "GeneratedFile.ts",
     "README.ts",
     "AGENTS*.md",
     "deno.lock",

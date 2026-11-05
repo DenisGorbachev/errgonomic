@@ -1,14 +1,14 @@
 # Implement FEG example
 
-* Read internal/guidelines.md
-* Read the [Market example](#market-example) below
-  * Notes:
-    * It's not completely correct because it returns an error struct, but every error type must be an enum (even if this enum has only one variant). However, it returns every available variable, and it has only one error return point per FEG, which is correct.
-* Add an example test in src/macros.rs mod tests that would show how to handle the fallible expression groups
-  * Preferences:
-    * Should be minimal
-  * Requirements:
-    * Must include at least two distinct fallible expression groups (i.e. the second FEG depending on the output variable from the first FEG)
+- Read internal/guidelines.md
+- Read the [Market example](#market-example) below
+  - Notes:
+    - It's not completely correct because it returns an error struct, but every error type must be an enum (even if this enum has only one variant). However, it returns every available variable, and it has only one error return point per FEG, which is correct.
+- Add an example test in src/macros.rs mod tests that would show how to handle the fallible expression groups
+  - Preferences:
+    - Should be minimal
+  - Requirements:
+    - Must include at least two distinct fallible expression groups (i.e. the second FEG depending on the output variable from the first FEG)
 
 ## Market example
 
