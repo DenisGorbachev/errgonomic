@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0](https://github.com/DenisGorbachev/errgonomic/compare/v0.5.3...v0.6.0) - 2026-11-05
+
+### Fixed
+
+- validate generated files before commits
+- CLAUDE
+- Cargo
+- shuck
+- install-hooks
+
+### Other
+
+- Merge remote-tracking branch 'repoconf-rust-public-lib-template/main'
+- Merge remote-tracking branch 'repoconf-rust-pre-public-lib-template/main'
+- Merge remote-tracking branch 'repoconf-rust-private-lib-template/main'
+- manage generated Markdown with Nushell
+- separate CI tests and validate Nushell
+- refresh errgonomic documentation
+- *(deps)* update errgonomic to 0.5.3
+
 ## [0.5.3](https://github.com/DenisGorbachev/errgonomic/compare/v0.5.2...v0.5.3) - 2026-09-06
 
 ### Fixed
