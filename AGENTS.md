@@ -1510,6 +1510,9 @@ name = "errgonomic"
 title = "Errgonomic"
 readme = { generate = true }
 
+[workspace.lints.cargo]
+unused_dependencies = "deny"
+
 [workspace.lints.rust]
 redundant_imports = "deny"
 unused_import_braces = "deny"
@@ -1648,7 +1651,6 @@ process = ["std"]
 #![doc = "```text"]
 #![doc = include_str!("./functions/writeln_error/fixtures/must_write_error.txt")]
 #![doc = "```"]
-#![cfg_attr(not(test), deny(unused_crate_dependencies))]
 #![no_std]
 
 extern crate alloc;

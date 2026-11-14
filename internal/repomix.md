@@ -681,7 +681,6 @@ cfg_if::cfg_if! {
 #![doc = "```text"]
 #![doc = include_str!("./functions/writeln_error/fixtures/must_write_error.txt")]
 #![doc = "```"]
-#![cfg_attr(not(test), deny(unused_crate_dependencies))]
 #![no_std]
 
 extern crate alloc;
