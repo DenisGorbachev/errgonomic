@@ -1466,7 +1466,7 @@ age = { type = "age", recipients = [
 resolver = "3"
 
 [workspace.package]
-version = "0.6.0"
+version = "0.6.1"
 edition = "2024"
 rust-version = "1.85.0"
 license = "Apache-2.0 OR MIT"
