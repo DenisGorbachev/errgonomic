@@ -14,25 +14,28 @@ exclude = [
     ".git",
     ".github",
     "node_modules",
+    "external",
     "vendor",
     "dist",
     "build",
     "target",
-    "doc/dev",
     "CHANGELOG.md",
+    "*.local.*",
 ]
 
 # Markdown flavor/dialect
 # TODO: Switch to "gfm" when rumdl implements it
 flavor = "standard"
 
+cache-dir = ".cache/rumdl"
+
 # Rule-specific configurations (uncomment and modify as needed)
 
 # [MD003]
 # style = "atx"  # Heading style (atx, atx_closed, setext)
 
-# [MD004]
-# style = "asterisk"  # Unordered list style (asterisk, plus, dash, consistent)
+[MD004]
+style = "dash"
 
 # [MD007]
 # indent = 4  # Unordered list indentation

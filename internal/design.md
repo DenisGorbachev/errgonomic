@@ -2,5 +2,5 @@
 
 ## Areas
 
-* [General](design/general.md)
-* [Naming](design/naming.md)
+- [General](design/general.md)
+- [Naming](design/naming.md)

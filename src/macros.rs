@@ -89,7 +89,8 @@ macro_rules! handle_iter {
 macro_rules! handle_iter_of_refs {
     ($results:expr, $items:expr, $variant:ident $(, $arg:ident$(: $value:expr)?)*) => {
         {
-            let (outputs, items, errors) = std::iter::zip($results, $items).fold(
+            use alloc::vec::Vec;
+            let (outputs, items, errors) = core::iter::zip($results, $items).fold(
                 (Vec::new(), Vec::new(), Vec::new()),
                 |(mut outputs, mut items, mut errors), (result, item)| {
                     match result {
@@ -151,6 +152,21 @@ macro_rules! map_err {
     };
 }
 
+/// Converts [`None`] into an error variant without returning early.
+///
+/// [`map_none`](crate::map_none) should be used only when the error variant doesn't capture any owned variables (which is very rare), or exactly at the end of the block (in the position of returned expression).
+#[macro_export]
+macro_rules! map_none {
+    ($option:expr, $variant:ident$(,)? $($arg:ident$(: $value:expr)?),*) => {
+        match $option {
+            Some(value) => Ok(value),
+            None => Err($variant {
+                $($arg: $crate::_into!($arg$(: $value)?)),*
+            })
+        }
+    };
+}
+
 /// Internal
 #[doc(hidden)]
 #[macro_export]
@@ -184,10 +200,14 @@ macro_rules! _index_err_async {
 #[cfg(all(test, feature = "std"))]
 mod tests {
     use crate::{ErrVec, ItemError, PathBufDisplay};
+    use alloc::boxed::Box;
+    use alloc::string::String;
+    use alloc::vec::Vec;
     use futures::future::join_all;
     use serde::{Deserialize, Serialize};
     use std::io;
     use std::path::{Path, PathBuf};
+    use std::println;
     use std::str::FromStr;
     use std::sync::{Arc, RwLock};
     use thiserror::Error;
@@ -233,12 +253,12 @@ mod tests {
         }
     }
 
-    /// This function tests the [`crate::handle_opt!`] macro
+    /// This function tests the [`crate::handle_opt!`] and [`crate::map_none!`] macros.
     #[allow(dead_code)]
-    fn find_even(numbers: Vec<u32>) -> Result<u32, FindEvenError> {
-        use FindEvenError::*;
-        let even = handle_opt!(numbers.iter().find(|x| *x % 2 == 0), NotFound);
-        Ok(*even)
+    fn first_word(lines: &[String]) -> Result<&str, FirstWordError> {
+        use FirstWordError::*;
+        let line = handle_opt!(lines.first(), LineNotFound);
+        map_none!(line.split_whitespace().next(), WordNotFound)
     }
 
     /// This function tests the [`crate::handle_iter!`] macro
@@ -248,7 +268,12 @@ mod tests {
         let results = numbers.into_iter().map(|number| {
             use CheckEvenError::*;
             if number % 2 == 0 {
-                Ok(number * 10)
+                match number.checked_mul(10) {
+                    Some(product) => Ok(product),
+                    None => Err(NumberOverflowed {
+                        number,
+                    }),
+                }
             } else {
                 Err(NumberNotEven {
                     number,
@@ -343,9 +368,11 @@ mod tests {
     }
 
     #[derive(Error, Debug)]
-    enum FindEvenError {
-        #[error("even number not found")]
-        NotFound,
+    enum FirstWordError {
+        #[error("line not found")]
+        LineNotFound {},
+        #[error("word not found")]
+        WordNotFound {},
     }
 
     #[derive(Error, Debug)]
@@ -370,6 +397,8 @@ mod tests {
     enum CheckEvenError {
         #[error("number is not even: {number}")]
         NumberNotEven { number: u32 },
+        #[error("number overflowed: {number}")]
+        NumberOverflowed { number: u32 },
     }
 
     async fn check_file(path: PathBuf) -> Result<String, CheckFileError> {
@@ -403,7 +432,7 @@ mod tests {
     }
 
     #[derive(Clone, Debug)]
-    struct Db {
+    struct State {
         user: User,
     }
 
@@ -413,12 +442,19 @@ mod tests {
     }
 
     #[allow(dead_code)]
-    fn get_username(db: Arc<RwLock<Db>>) -> Result<String, GetUsernameError> {
+    #[derive(Clone, Debug)]
+    struct Book {
+        user_idx: usize,
+        name: String,
+    }
+
+    #[allow(dead_code)]
+    fn get_username(state: Arc<RwLock<State>>) -> Result<String, GetUsernameError> {
         use GetUsernameError::*;
-        // `db.read()` returns `LockResult` whose Err variant is `PoisonError<RwLockReadGuard<'_, T>>`, which contains an anonymous lifetime
+        // `state.read()` returns `LockResult` whose Err variant is `PoisonError<RwLockReadGuard<'_, T>>`, which contains an anonymous lifetime
         // The error enum returned from this function must contain only owned fields, so it can't contain a `source` that has a lifetime
         // Therefore, we have to use handle_discard!, although it is discouraged
-        let guard = handle_discard!(db.read(), AcquireReadLockFailed);
+        let guard = handle_discard!(state.read(), AcquireReadLockFailed);
         let username = guard.user.username.clone();
         Ok(username)
     }
@@ -427,6 +463,42 @@ mod tests {
     pub enum GetUsernameError {
         #[error("failed to acquire read lock")]
         AcquireReadLockFailed,
+    }
+
+    #[derive(Clone, Debug)]
+    struct Db {
+        users: Vec<User>,
+        books: Vec<Book>,
+    }
+
+    impl Db {
+        /// Validates only the foreign keys
+        /// Assumes that the collection items have already been validated before they were inserted
+        #[allow(dead_code)]
+        pub fn validate(&self) -> impl Iterator<Item = DbValidateError> {
+            use DbValidateError::*;
+
+            self.books
+                .iter()
+                .enumerate()
+                .filter_map(|(book_idx, book)| {
+                    let user_idx = book.user_idx;
+                    if self.users.get(user_idx).is_none() {
+                        Some(UserNotFound {
+                            book_idx,
+                            user_idx,
+                        })
+                    } else {
+                        None
+                    }
+                })
+        }
+    }
+
+    #[derive(Error, Debug)]
+    pub enum DbValidateError {
+        #[error("book #{book_idx} has a non-existent user #{user_idx}")]
+        UserNotFound { book_idx: usize, user_idx: usize },
     }
 
     #[allow(dead_code)]

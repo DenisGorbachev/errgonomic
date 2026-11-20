@@ -1,0 +1,205 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.6.1](https://github.com/DenisGorbachev/errgonomic/compare/v0.6.0...v0.6.1) - 2026-11-16
+
+### Fixed
+
+- tolerate Clippy derive macro regression
+
+### Other
+
+- deny Cargo warnings
+- remove redundant homepages and disable age gate
+
+## [0.6.0](https://github.com/DenisGorbachev/errgonomic/compare/v0.5.3...v0.6.0) - 2026-11-05
+
+### Fixed
+
+- validate generated files before commits
+- CLAUDE
+- Cargo
+- shuck
+- install-hooks
+
+### Other
+
+- Merge remote-tracking branch 'repoconf-rust-public-lib-template/main'
+- Merge remote-tracking branch 'repoconf-rust-pre-public-lib-template/main'
+- Merge remote-tracking branch 'repoconf-rust-private-lib-template/main'
+- manage generated Markdown with Nushell
+- separate CI tests and validate Nushell
+- refresh errgonomic documentation
+- *(deps)* update errgonomic to 0.5.3
+
+## [0.5.3](https://github.com/DenisGorbachev/errgonomic/compare/v0.5.2...v0.5.3) - 2026-09-06
+
+### Fixed
+
+- lib
+- repomix
+
+## [0.5.2](https://github.com/DenisGorbachev/errgonomic/compare/v0.5.1...v0.5.2) - 2026-08-28
+
+### Fixed
+
+- AGENTS
+- CargoMetadata
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- support
+- README
+- refactor to support workspaces
+- update errgonomic
+- update errgonomic
+- clippy
+- clippy
+- general
+- Cargo
+- absolute_paths
+- Cargo
+- bump Rust version
+- AGENTS
+- AGENTS
+- clippy::arithmetic_side_effects
+- AGENTS
+- fnox
+- mv yolobox .yolobox
+- configure deno not to put modules under node_modules
+- idiomatic_version_file_enable_tools
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+
+### Other
+
+- Merge remote-tracking branch 'repoconf-rust-public-lib-template/main'
+
+## [0.5.1](https://github.com/DenisGorbachev/errgonomic/compare/v0.5.0...v0.5.1) - 2026-02-16
+
+### Fixed
+
+- README
+- remove #because it does not work correctly when an optional dependency feature is disabled
+- remove ignores for cargo-machete
+- general
+- AGENTS
+- serde
+- update errgonomic
+- update errgonomic
+- includeCargoDependencyFileIfExists
+- don't include all agent docs
+- AGENTS
+- AGENTS
+- auto-resolve the docs
+- ExitCode cli guidance
+- add itertools
+- use latest version of package in includeCargoDependencyFile
+
+## [0.4.1](https://github.com/DenisGorbachev/errgonomic/compare/v0.4.0...v0.4.1) - 2026-01-24
+
+### Fixed
+
+- render error handling docs directly from the dependency
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- update errgonomic
+- AGENTS
+- bump deps
+- update errgonomic
+
+### Other
+
+- Merge remote-tracking branch 'repoconf-rust-public-lib-template/main'
+- Merge remote-tracking branch 'repoconf-rust-pre-public-lib-template/main'
+- Merge remote-tracking branch 'repoconf-rust-private-template/main'
+
+## [0.3.0](https://github.com/DenisGorbachev/errgonomic/compare/v0.2.2...v0.3.0) - 2026-01-03
+
+### Added
+
+- implement AGENTS script
+
+### Fixed
+
+- AGENTS
+- fenced code blocks
+- handle backticks in code fences
+- render code blocks in agents output
+- update errgonomic
+- AGENTS
+- AGENTS
+- update errgonomic
+
+### Other
+
+- resolve parts with Promise.all
+- build parts array inline
+- update file existence check
+- add includeFileIfExists
+
+## [0.2.2](https://github.com/DenisGorbachev/errgonomic/compare/v0.2.1...v0.2.2) - 2025-12-30
+
+### Added
+
+- error-handling
+
+### Fixed
+
+- update errgonomic
+- update errgonomic
+- errgonomic & cargo-insert-docs
+
+### Other
+
+- Merge remote-tracking branch 'repoconf-rust-public-lib-template/main'
+
+## [0.2.1](https://github.com/DenisGorbachev/errgonomic/compare/v0.2.0...v0.2.1) - 2025-12-29
+
+### Fixed
+
+- Cargo
+- relax deps versions
+
+## [0.2.0](https://github.com/DenisGorbachev/errgonomic/compare/v0.1.2...v0.2.0) - 2025-12-29
+
+### Fixed
+
+- Cargo
+- exclude
+
+### Other
+
+- Merge remote-tracking branch 'repoconf-rust-public-lib-template/main'
+- Merge remote-tracking branch 'repoconf-rust-pre-public-lib-template/main'
+- Merge remote-tracking branch 'repoconf-rust-private-template/main'
+
+## [0.1.2](https://github.com/DenisGorbachev/errgonomic/compare/v0.1.1...v0.1.2) - 2025-12-29
+
+### Fixed
+
+- lib
+
+## [0.1.1](https://github.com/DenisGorbachev/errgonomic/compare/v0.1.0...v0.1.1) - 2025-12-29
+
+### Fixed
+
+- README

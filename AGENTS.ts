@@ -1,0 +1,319 @@
+#!/usr/bin/env -S deno run --node-modules-dir=false --allow-read --allow-run --allow-env=HOME --no-lock
+
+import type {CargoMetadata, CargoPackage} from "./CargoMetadata.ts"
+import {CargoMetadataSchema, PackageMetadataSchema, selectWorkspacePackages} from "./CargoMetadata.ts"
+import {compare, parse} from "jsr:@std/semver@1.0.0"
+import {stringify} from "jsr:@libs/xml@7.0.3"
+import {parse as parseMarkdown, postprocess, preprocess} from "npm:micromark@4.0.2"
+import {decodeString} from "npm:micromark-util-decode-string@2.0.1"
+import {normalizeUri} from "npm:micromark-util-sanitize-uri@2.0.1"
+import remarkParse from "npm:remark-parse@11.0.0"
+import {unified} from "npm:unified@11.0.5"
+import {visit} from "npm:unist-util-visit@5.0.0"
+import {basename, dirname, extname, fromFileUrl, isAbsolute, join, relative, resolve, SEPARATOR, toFileUrl} from "jsr:@std/path@1.1.4"
+
+const sourcePath = fromFileUrl(import.meta.url)
+const rootPath = dirname(sourcePath)
+const decoder = new TextDecoder()
+const homePath = Deno.env.get("HOME")
+if (!homePath) throw new Error("HOME is not set")
+if (!isAbsolute(homePath)) throw new Error("HOME is not an absolute path")
+
+const isMarkdownPath = (path: string) => path.toLowerCase().endsWith(".md")
+const resolvePath = (path: string) => resolve(rootPath, path)
+const posixPath = (path: string) => SEPARATOR === "/" ? path : path.replaceAll(SEPARATOR, "/")
+
+const renderPath = (path: string) => {
+  if (!isAbsolute(path)) return posixPath(path)
+  const resolvedPath = resolvePath(path)
+  const relativeToHome = relative(homePath, resolvedPath)
+  if (!relativeToHome) return "~"
+  if (isAbsolute(relativeToHome) || relativeToHome === ".." || relativeToHome.startsWith(`..${SEPARATOR}`)) return posixPath(resolvedPath)
+  return `~/${posixPath(relativeToHome)}`
+}
+
+const renderCommand = (command: string, args: string[]) => [command, ...args].join(" ")
+
+const renderCommandOutput = (stdout: Uint8Array, stderr: Uint8Array) => `stdout:
+${decoder.decode(stdout)}
+stderr:
+${decoder.decode(stderr)}`
+
+const runCommand = async (command: string, args: string[]) => {
+  const output = await new Deno.Command(command, {args, cwd: rootPath, stdout: "piped", stderr: "piped"}).output()
+  if (!output.success) {
+    throw new Error(`'${renderCommand(command, args)}' failed:\n${renderCommandOutput(output.stdout, output.stderr)}`)
+  }
+  return decoder.decode(output.stdout).trimEnd()
+}
+
+const fileExists = async (path: string) => {
+  try {
+    await Deno.stat(resolvePath(path))
+    return true
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return false
+    throw error
+  }
+}
+
+type MarkdownEdit = {start: number; end: number; replacement: string}
+
+const applyMarkdownEdits = (markdown: string, edits: MarkdownEdit[]) => edits
+  .reduceRight((source, edit) => source.slice(0, edit.start) + edit.replacement + source.slice(edit.end), markdown)
+
+const relativePathInsideRoot = (path: string) => {
+  const relativePath = relative(rootPath, path)
+  return isAbsolute(relativePath) || relativePath === ".." || relativePath.startsWith(`..${SEPARATOR}`) ? undefined : relativePath
+}
+
+const rebaseLink = (destination: string, sourcePath: string) => {
+  if (/^(?:#|\/|\\|[a-z][a-z\d+.-]*:)/i.test(destination)) return destination
+  try {
+    const suffixStart = destination.search(/[?#]/)
+    const path = suffixStart < 0 ? destination : destination.slice(0, suffixStart)
+    const suffix = suffixStart < 0 ? "" : destination.slice(suffixStart)
+    const target = new URL(normalizeUri(path), toFileUrl(sourcePath))
+    const relativePath = relativePathInsideRoot(fromFileUrl(target))
+    if (relativePath === undefined) return destination
+    const encodedPath = posixPath(relativePath).split("/").map(encodeURIComponent).join("/") || "."
+    return `${encodedPath}${target.pathname.endsWith("/") ? "/" : ""}${normalizeUri(suffix)}`
+  } catch (cause) {
+    if (cause instanceof URIError) return destination
+    throw new Error(`Could not rebase link '${destination}' in '${renderPath(sourcePath)}'`, {cause})
+  }
+}
+
+const rebaseMarkdownLinks = (markdown: string, path: string) => {
+  const fullPath = resolvePath(path)
+  if (relativePathInsideRoot(fullPath) === undefined) return markdown
+  const events = postprocess(parseMarkdown().document().write(preprocess()(markdown, undefined, true)))
+  const edits = events.flatMap(([kind, token]): MarkdownEdit[] => {
+    if (kind !== "enter" || token.type !== "resourceDestinationString" && token.type !== "definitionDestinationString") return []
+    const destination = decodeString(markdown.slice(token.start.offset, token.end.offset))
+    const rebased = rebaseLink(destination, fullPath)
+    if (rebased === destination) return []
+    return [{
+      start: token.start.offset,
+      end: token.end.offset,
+      replacement: rebased.replaceAll("&", "&amp;").replace(/[()]/g, "\\$&"),
+    }]
+  })
+  return applyMarkdownEdits(markdown, edits)
+}
+
+const shiftHeadings = (markdown: string, headingLevel: number) => {
+  const edits: MarkdownEdit[] = []
+  visit(unified().use(remarkParse).parse(markdown), "heading", (heading) => {
+    const start = heading.position?.start
+    const end = heading.position?.end
+    if (start?.offset === undefined || end?.offset === undefined) throw new Error("heading position is missing")
+    const depth = Math.min(6, Math.max(1, heading.depth + headingLevel - 1))
+    const markerEnd = start.offset + heading.depth
+    if (markdown.slice(start.offset, markerEnd) === "#".repeat(heading.depth)) {
+      edits.push({start: start.offset, end: markerEnd, replacement: "#".repeat(depth)})
+      return
+    }
+    const lines = markdown.slice(start.offset, end.offset).split(/\r?\n/)
+    lines.pop()
+    const indentation = Math.max(0, start.column - 1)
+    const contents = lines.map((line, index) => index === 0 ? line : line.slice(indentation)).join(" ")
+    edits.push({start: start.offset, end: end.offset, replacement: `${"#".repeat(depth)} ${contents}`})
+  })
+  return applyMarkdownEdits(markdown, edits).trimEnd()
+}
+
+const renderCodeSection = (heading: string, contents: string, languageIdentifier: string, headingLevel: number) => {
+  contents = contents.trimEnd()
+  const fence = getFence(contents)
+  return `${"#".repeat(headingLevel)} ${heading}\n\n${fence}${languageIdentifier}\n${contents}\n${fence}`
+}
+
+const renderCodeFile = (path: string, contents: string, headingLevel: number) =>
+  renderCodeSection(path, contents, getLanguageIdentifier(path), headingLevel)
+
+const getFence = (contents: string) => {
+  const matches = contents.match(/`+/g) ?? []
+  const max = matches.reduce((current, match) => Math.max(current, match.length), 0)
+  return "`".repeat(Math.max(3, max + 1))
+}
+
+const getLanguageIdentifier = (path: string) => {
+  const extension = extname(path)
+  switch (extension) {
+    case ".conf":
+      return "text"
+    case ".ts":
+      return "typescript"
+    case ".rs":
+      return "rust"
+    case ".xml":
+      return "xml"
+    case ".toml":
+      return "toml"
+    default:
+      throw new Error(`Could not get a language identifier for extension: ${extension}`)
+  }
+}
+
+export const renderXmlFile = (path: string, contents: string) =>
+  stringify(
+    {file: {path, contents: "\n" + contents}},
+    {format: {indent: "", breakline: 0}},
+  ).trimEnd()
+
+const includeFile = async (path: string, headingLevel = 3) => renderFileContents(path, await Deno.readTextFile(resolvePath(path)), renderPath(path), headingLevel)
+
+const renderFileContents = (path: string, contents: string, pathToRender: string, headingLevel: number) => isMarkdownPath(path) ? shiftHeadings(rebaseMarkdownLinks(contents, path), headingLevel) : renderCodeFile(pathToRender, contents, headingLevel)
+
+export const runAgentDocsList = async (): Promise<string[]> => {
+  const stdout = await runCommand("mise", ["run", "agent:docs:list"])
+  return stdout ? stdout.split(/\r?\n/).filter((line) => line.length > 0).sort() : []
+}
+
+export const includeAgentDocs = async () => {
+  const files = await runAgentDocsList()
+  if (!files.length) return ""
+  return `## Extra docs
+
+Read the extra docs from the list below if they are relevant to your current task:
+
+${files.map((file) => `- ${file}`).join("\n")}`.trim()
+}
+
+const readCargoMetadata = async (): Promise<CargoMetadata> => {
+  const stdout = await runCommand("cargo", ["metadata", "--locked", "--format-version=1"])
+  try {
+    return CargoMetadataSchema.parse(JSON.parse(stdout))
+  } catch (cause) {
+    throw new Error("cargo metadata output is invalid", {cause})
+  }
+}
+
+let cargoMetadataPromise: Promise<CargoMetadata> | undefined
+const getCargoMetadata = () => cargoMetadataPromise ??= readCargoMetadata()
+
+const includeAllCargoFilesIfExists = async (relativePaths: string[], headingLevel: number) => {
+  const metadata = await getCargoMetadata()
+  const fullPaths = new Set(
+    selectWorkspacePackages(metadata)
+      .flatMap((cargoPackage) => relativePaths.map((path) => join(dirname(cargoPackage.manifest_path), path))),
+  )
+  if (relativePaths.includes("Cargo.toml")) fullPaths.add(join(metadata.workspace_root, "Cargo.toml"))
+  const candidates = [...fullPaths]
+    .map((path) => ({
+      fullPath: path,
+      renderedPath: posixPath(relative(rootPath, path)),
+    }))
+    .sort((left, right) => left.renderedPath.localeCompare(right.renderedPath))
+  return (await Promise.all(
+    candidates.map(async ({fullPath, renderedPath}) => {
+      if (!(await fileExists(fullPath))) return null
+      return renderFileContents(fullPath, await Deno.readTextFile(fullPath), renderedPath, headingLevel)
+    }),
+  )).filter((file): file is string => file !== null).join("\n\n")
+}
+
+const parseSemVer = (value: string) => {
+  const parsed = parse(value)
+  if (!parsed) throw new Error(`invalid semver: '${value}'`)
+  return parsed
+}
+
+const getDirectDependencies = (metadata: CargoMetadata, dependencyName: string) => {
+  if (!metadata.resolve) throw new Error(`cargo metadata is missing the dependency graph required to find '${dependencyName}'`)
+  const workspaceMembers = new Set(metadata.workspace_members)
+  const matchingPackages = new Set(
+    metadata.packages.filter((pkg) => pkg.name === dependencyName).map((pkg) => pkg.id),
+  )
+  const dependencyPackageIds = new Set(
+    metadata.resolve.nodes
+      .filter((node) => workspaceMembers.has(node.id))
+      .flatMap((node) => node.deps
+        .filter((dependency) => dependency.name === dependencyName || matchingPackages.has(dependency.pkg))
+        .map((dependency) => dependency.pkg)),
+  )
+  return metadata.packages.filter((pkg) => dependencyPackageIds.has(pkg.id))
+}
+
+const getPackageProfiles = (cargoPackage: CargoPackage) => {
+  try {
+    return PackageMetadataSchema.parse(cargoPackage.metadata).details.profiles
+  } catch (cause) {
+    throw new Error(`package metadata in '${renderPath(cargoPackage.manifest_path)}' is invalid`, {cause})
+  }
+}
+
+const hasPackageProfile = (metadata: CargoMetadata, profile: string) => {
+  return selectWorkspacePackages(metadata).some((cargoPackage) => getPackageProfiles(cargoPackage).includes(profile))
+}
+
+const includeFileIfPackageProfileIsEnabled = async (profile: string, path: string, headingLevel = 3) => {
+  const metadata = await getCargoMetadata()
+  return hasPackageProfile(metadata, profile) ? await includeFile(path, headingLevel) : null
+}
+
+const includeFileIfCargoDependencyExists = async (dependencyName: string, path: string, headingLevel = 3) => {
+  const metadata = await getCargoMetadata()
+  return getDirectDependencies(metadata, dependencyName).length > 0 ? await includeFile(path, headingLevel) : null
+}
+
+const includeFileFromCargoDependencyIfCargoDependencyExists = async (dependencyName: string, path: string, headingLevel = 3) => {
+  const metadata = await getCargoMetadata()
+  const candidates = getDirectDependencies(metadata, dependencyName)
+  if (candidates.length === 0) return null
+  const cargoPackage = candidates.reduce((best, current) => {
+    const comparison = compare(parseSemVer(current.version), parseSemVer(best.version))
+    return comparison > 0 || comparison === 0 && current.manifest_path > best.manifest_path ? current : best
+  })
+  const crateRoot = dirname(cargoPackage.manifest_path)
+  const fullPath = join(crateRoot, path)
+  return renderFileContents(fullPath, await Deno.readTextFile(fullPath), `${dependencyName}/${path}`, headingLevel)
+}
+
+const includeFileIfExists = async (path: string, headingLevel = 3) => {
+  return await fileExists(path) ? await includeFile(path, headingLevel) : null
+}
+
+const renderSection = async (heading: string, bodyPartPromises: Promise<string | null>[]) => {
+  const body = (await Promise.all(bodyPartPromises))
+    .filter((part): part is string => part !== null && part.length > 0)
+    .join("\n\n")
+  return body.length > 0 ? `${heading}\n\n${body}` : null
+}
+
+// `parts` must not contain a top-level heading (a global AGENTS.md must contain it)
+const parts = (await Promise.all([
+  renderSection(
+    "## Guidelines",
+    [
+      includeFile(".agents/general.md"),
+      includeFileIfCargoDependencyExists("serde", ".agents/crates/serde.md"),
+      includeFileIfCargoDependencyExists("subtype", ".agents/crates/subtype.md"),
+      includeFileIfCargoDependencyExists("clap", ".agents/crates/clap.md"),
+      includeFileIfCargoDependencyExists("clap", ".agents/cli.md"),
+      includeFileIfExists(".agents/project.md"),
+      includeFileIfExists(".agents/knowledge.md"),
+      includeFileIfExists(".agents/docs.md"),
+      includeFileIfPackageProfileIsEnabled("api-client", ".agents/api.md"),
+      includeFileIfExists(".agents/gotchas.md"),
+      includeFile("internal/guidelines.md"),
+      includeFile("src/macros.rs", 4),
+    ],
+  ),
+  includeAgentDocs(),
+  renderSection(
+    "## Project files",
+    [
+      includeFile("mise.toml"),
+      includeFile("fnox.toml"),
+      includeAllCargoFilesIfExists(["Cargo.toml"], 3),
+      includeAllCargoFilesIfExists(["src/lib.rs", "src/main.rs"], 3),
+    ],
+  ),
+])).filter((part): part is string => !!part)
+
+const content = `${parts.join("\n\n")}\n`
+
+const path = join(rootPath, `${basename(sourcePath, extname(sourcePath))}.md`)
+console.log(JSON.stringify([{path, content}]))

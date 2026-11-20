@@ -1,21 +1,24 @@
 use crate::ErrorDisplayer;
+use alloc::format;
+use alloc::vec::Vec;
 use core::error::Error;
-use core::fmt::{Debug, Write};
-use core::fmt::{Display, Formatter};
+use core::fmt::{self, Debug, Display, Formatter, Write};
 use core::ops::{Deref, DerefMut};
 
-/// An owned collection of errors that itself implements [`Error`].
-/// T must implement Display or Errgonomic.
-#[derive(Default, Debug)]
-pub struct ErrVec<E> {
-    /// Collected errors.
-    pub inner: Vec<E>,
+/// An owned collection of errors
+#[derive(Default, Clone, Debug)]
+pub struct ErrVec<E: Error>(pub Vec<E>);
+
+impl<E: Error> ErrVec<E> {
+    pub fn new(iter: impl IntoIterator<Item = E>) -> Self {
+        Self(iter.into_iter().collect())
+    }
 }
 
 impl<E: Error> Display for ErrVec<E> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "encountered {len} errors", len = self.len())?;
-        self.inner.iter().try_for_each(|error| {
+        self.0.iter().try_for_each(|error| {
             f.write_char('\n')?;
             let recursive_displayer = ErrorDisplayer(error);
             let string = format!("{recursive_displayer}");
@@ -32,49 +35,40 @@ impl<E: Error> Display for ErrVec<E> {
 
 impl<E: Error> Error for ErrVec<E> {}
 
-impl<E> Deref for ErrVec<E> {
+impl<E: Error> Deref for ErrVec<E> {
     type Target = Vec<E>;
 
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        &self.0
     }
 }
 
-impl<E> DerefMut for ErrVec<E> {
+impl<E: Error> DerefMut for ErrVec<E> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
+        &mut self.0
     }
 }
 
-impl<E> ErrVec<E> {
-    /// Builds an [`ErrVec`] by boxing each error from the iterator.
-    pub fn new(iter: impl IntoIterator<Item = E>) -> Self {
-        Self {
-            inner: iter.into_iter().collect(),
-        }
+impl<E: Error> From<ErrVec<E>> for Vec<E> {
+    fn from(val: ErrVec<E>) -> Self {
+        val.0
     }
 }
 
-impl<E> From<Vec<E>> for ErrVec<E> {
+impl<E: Error> From<Vec<E>> for ErrVec<E> {
     fn from(inner: Vec<E>) -> Self {
-        Self {
-            inner,
-        }
+        Self(inner)
     }
 }
 
-impl<E: Clone, const N: usize> From<[E; N]> for ErrVec<E> {
+impl<E: Error + Clone, const N: usize> From<[E; N]> for ErrVec<E> {
     fn from(inner: [E; N]) -> Self {
-        Self {
-            inner: inner.to_vec(),
-        }
+        Self(inner.to_vec())
     }
 }
 
-impl<E: Clone> From<&[E]> for ErrVec<E> {
+impl<E: Error + Clone> From<&[E]> for ErrVec<E> {
     fn from(inner: &[E]) -> Self {
-        Self {
-            inner: inner.to_vec(),
-        }
+        Self(inner.to_vec())
     }
 }

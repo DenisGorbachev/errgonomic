@@ -1,0 +1,141 @@
+# CLI guidelines
+
+## Deps
+
+- `clap` (features: at least "derive", "env").
+- `tokio` (features: at least "macros", "rt", "rt-multi-thread").
+- `errgonomic`.
+- `thiserror`.
+
+## File layout and required items
+
+### File `src/main.rs`
+
+- Must define a `main` entry point.
+- Must define a `verify_cli` test for top-level command exactly as in example below (with `debug_assert`).
+
+Example:
+
+```rust
+use clap::Parser;
+use errgonomic::exit_result;
+use my_crate_name::Command;
+use std::process::ExitCode;
+
+#[tokio::main]
+async fn main() -> ExitCode {
+    let args = Command::parse();
+    let result = args.run().await;
+    exit_result(result)
+}
+
+#[test]
+fn verify_cli() {
+    use clap::CommandFactory;
+    Command::command().debug_assert();
+}
+```
+
+### File `src/command.rs`
+
+- Must define a [command-like struct](#command-like-struct) named `Command`.
+  - Must have attr:
+    - `#[command(author, version, about, propagate_version = true, flatten_help = true, disable_help_subcommand = true)]`.
+- Must define a [subcommand-like enum](#subcommand-like-enum) named `Subcommand`.
+
+Example:
+
+```rust
+use std::process::ExitCode;
+use Subcommand::*;
+use errgonomic::map_err;
+use thiserror::Error;
+
+#[derive(clap::Parser, Debug)]
+#[command(author, version, about, propagate_version = true, flatten_help = true, disable_help_subcommand = true)]
+pub struct Command {
+    #[command(subcommand)]
+    subcommand: Subcommand,
+}
+
+#[derive(clap::Subcommand, Clone, Debug)]
+pub enum Subcommand {
+    Print(PrintCommand),
+}
+
+impl Command {
+    pub async fn run(self) -> Result<ExitCode, CommandRunError> {
+        use CommandRunError::*;
+        let Self {
+            subcommand,
+        } = self;
+        match subcommand {
+            Print(command) => map_err!(command.run().await, PrintCommandRunFailed),
+        }
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum CommandRunError {
+    #[error("failed to run print command")]
+    PrintCommandRunFailed { source: PrintCommandRunError },
+}
+
+mod print_command;
+
+pub use print_command::*;
+```
+
+## Defs
+
+### Command-like struct
+
+A struct that contains fields for CLI args.
+
+- Must have a name formed by concatenating all command names leading up to and including this command, followed by `Command` (see example above).
+- Must have at least attrs:
+  - `derive`:
+    - Must contain at least:
+      - `Parser` (`use clap::Parser`).
+  - `command`:
+    - Must contain at least:
+      - `flatten_help = true`.
+- If it is a top-level command, must be attached to `src/lib.rs`; else: must be attached to `src/command.rs`.
+- For each field:
+  - If field has a collection type (e.g.: `Vec`), it must have attr `num_args = 1..`.
+- May contain a `subcommand` field annotated with `#[command(subcommand)]`.
+- Must have a `pub async fn run` method.
+  - Must return a `Result` with an `ExitCode` success value.
+  - If struct contains a `subcommand` field, this method must match on `subcommand` and call selected command's `run` method.
+
+Command example:
+
+- Name: `DbDownloadYcombinatorStartupsCommand`.
+- File: `src/command/db_download_ycombinator_startups_command.rs` (attached to `src/command.rs`).
+- Shell command: `cargo run -- db download ycombinator-startups`.
+
+### Subcommand-like enum
+
+An enum that contains variants for CLI subcommands.
+
+- Must have a name formed by concatenating all command names leading up to and including this command, followed by `Subcommand` (see example above).
+- Must have at least attrs:
+  - `derive`:
+    - Must contain at least:
+      - `Subcommand` (`use clap::Subcommand`).
+- Must be located in same file as its parent command struct.
+- Each variant must be a tuple variant containing exactly one command.
+
+Subcommand example:
+
+- Name: `DbDownloadSubcommand`.
+- File: `src/cli/db_command/db_download_command.rs` (same file as its parent `DbDownloadCommand`).
+
+### Proxy command-like struct
+
+A [command-like struct](#command-like-struct) that has a `subcommand` field and calls `run` on each subcommand.
+
+Proxy command example:
+
+- Name: `DbCommand`.
+- File: `src/command/db_command.rs` (attached to `src/command.rs`).

@@ -1,98 +1,16 @@
-use crate::{Prefixer, write_to_named_temp_file};
+use crate::{ErrorDisplayer, WriteToNamedTempFileError, handle, map_err, write_to_named_temp_file};
+use alloc::format;
 use core::error::Error;
-use core::fmt::Formatter;
+use core::fmt::{self, Formatter};
+use shlex::QuoteError;
+use shlex::bytes::try_quote;
+use std::eprintln;
 use std::io;
 use std::io::{Write, stderr};
+use std::path::PathBuf;
 
-// pub struct Displayer<'a, E: ?Sized>(pub &'a E);
-//
-// impl<'a, E: Error + ?Sized> DoDisplay for &&Displayer<'a, E> {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-//         writeln!(f, "- {}", self.0)?;
-//         if let Some(source) = self.0.source() {
-//             let error_display = Displayer(source);
-//             DoDisplay::fmt(&&&error_display, f)
-//         } else {
-//             Ok(())
-//         }
-//     }
-// }
-//
-// impl<'a, E: Display + ?Sized> DoDisplay for &Displayer<'a, E> {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-//         writeln!(f, "- {}", self.0)
-//     }
-// }
-//
-// /// Fallback impl
-// impl<'a, E: ?Sized> DoDisplay for Displayer<'a, E> {
-//     fn fmt(&self, _f: &mut Formatter<'_>) -> core::fmt::Result {
-//         Err(core::fmt::Error)
-//     }
-// }
-//
-// impl<E: DoWrite> DoWrite for &Displayer<'_, E> {
-//     fn do_write(&self, writer: &mut dyn Write) -> Result<(), io::Error> {
-//         self.0.do_write(writer)
-//     }
-// }
-//
-// impl<E: Error + ?Sized> DoWrite for Displayer<'_, E> {
-//     fn do_write(&self, writer: &mut dyn Write) -> Result<(), io::Error> {
-//         writeln!(writer, "- {}", self.0)?;
-//         if let Some(source_new) = self.0.source() {
-//             let source_error_display = Displayer(source_new);
-//             writeln_error_to_writer_dyn(&source_error_display, writer, false)
-//         } else {
-//             Ok(())
-//         }
-//     }
-// }
-//
-// /// This impl is needed to allow using `ErrorDisplay` values in built-in macros ([`write!`](core::fmt::write), [`writeln!`](core::fmt::writeln), [`format_args!`]) that call `Display::fmt` or `Debug::fmt`
-// impl<'a, E: ?Sized> Display for Displayer<'a, E> {
-//     fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-//         DoDisplay::fmt(self, f)
-//     }
-// }
-
-/// Writes a human-readable error trace to the provided writer and persists the full debug output to a temp file.
-///
-/// This is useful for CLI tools that want a concise error trace on stderr and a path to a full report.
-pub fn writeln_error_to_writer_and_file<E>(error: &E, writer: &mut dyn Write) -> Result<(), io::Error>
-where
-    E: Error + 'static,
-{
-    writeln!(writer, "{error}")?;
-    writeln!(writer)?;
-    let error_debug = format!("{error:#?}");
-    let result = write_to_named_temp_file(error_debug.as_bytes());
-    match result {
-        Ok((_file, path_buf)) => {
-            writeln!(writer, "See the full error report:\nless {}", path_buf.display())
-        }
-        Err(other_error) => {
-            writeln!(writer, "{other_error:#?}")
-        }
-    }
-}
-
-// /// Writes a human-readable error trace to the provided writer.
-// ///
-// /// When the error is an [`ErrVec`], each element is rendered as a nested bullet list.
-// pub fn writeln_error_to_writer<E>(error: &E, writer: &mut dyn Write, is_top_level: bool) -> Result<(), io::Error>
-// where
-//     E: Error + 'static,
-// {
-//     writeln!(writer, "- {}", error)?;
-//     if let Some(source_new) = error.source() {
-//         writeln_error_to_writer(source_new, writer, false)
-//     } else {
-//         Ok(())
-//     }
-// }
-
-pub fn writeln_error_to_formatter<E: Error + ?Sized>(error: &E, f: &mut Formatter<'_>) -> core::fmt::Result {
+/// Writes a human-readable error trace to the provided formatter.
+pub fn writeln_error_to_formatter<E: Error + ?Sized>(error: &E, f: &mut Formatter<'_>) -> fmt::Result {
     use std::fmt::Write;
     write!(f, "- {error}")?;
     if let Some(source_new) = error.source() {
@@ -103,22 +21,56 @@ pub fn writeln_error_to_formatter<E: Error + ?Sized>(error: &E, f: &mut Formatte
     }
 }
 
-/// Writes an error trace to stderr and, if possible, includes a path to the full error report.
-pub fn eprintln_error<E>(error: &E)
-where
-    E: Error + 'static,
-{
-    let mut stderr = stderr().lock();
-    let result = writeln_error_to_writer_and_file(error, &mut stderr);
+/// Writes the error trace and saves its debug report through [`write_to_named_temp_file`].
+pub fn writeln_error_to_writer_and_file<E: Error>(error: &E, writer: &mut dyn Write) -> Result<(), WritelnErrorToWriterAndFileError> {
+    use WritelnErrorToWriterAndFileError::*;
+    let displayer = ErrorDisplayer(error);
+    map_err!(writeln!(writer, "{displayer}"), WriteFailed)?;
+    map_err!(writeln!(writer), WriteFailed)?;
+    let error_debug = format!("{error:#?}");
+    let result = write_to_named_temp_file(error_debug.as_bytes());
     match result {
-        Ok(()) => (),
-        Err(err) => eprintln!("failed to write to stderr: {err:#?}"),
+        Ok((_file, path_buf)) => {
+            map_err!(writeln!(writer, "See the full error report:"), WriteFailed)?;
+            if cfg!(windows) {
+                map_err!(writeln!(writer, "{}", path_buf.display()), WriteFailed)?;
+            } else {
+                let path = handle!(try_quote(path_buf.as_os_str().as_encoded_bytes()), TryQuoteFailed, path: path_buf);
+                handle!(writer.write_all(b"less -- "), WriteFailed);
+                handle!(writer.write_all(&path), WriteFailed);
+                handle!(writeln!(writer), WriteFailed);
+            }
+            Ok(())
+        }
+        Err(source) => {
+            map_err!(writeln!(writer, "{source:#?}"), WriteFailed)?;
+            Err(WriteToNamedTempFileFailed {
+                source,
+            })
+        }
     }
 }
 
-/// Builds a [`Prefixer`] suitable for nested error bullet lists.
-pub fn error_prefixer(writer: &mut dyn Write) -> Prefixer<'_> {
-    Prefixer::new("  * ", "    ", writer)
+/// Errors returned by [`writeln_error_to_writer_and_file`].
+#[derive(thiserror::Error, Debug)]
+pub enum WritelnErrorToWriterAndFileError {
+    #[error("failed to write the error trace")]
+    WriteFailed { source: io::Error },
+    #[error("failed to write the full error report")]
+    WriteToNamedTempFileFailed { source: WriteToNamedTempFileError },
+    #[error("failed to shell-quote error report path '{path}'", path = path.display())]
+    TryQuoteFailed { source: QuoteError, path: PathBuf },
+}
+
+/// Writes an error trace to stderr and, if possible, includes a path to the full error report.
+pub fn eprintln_error<E>(error: &E)
+where
+    E: Error,
+{
+    let mut stderr = stderr().lock();
+    if let Err(error) = writeln_error_to_writer_and_file(error, &mut stderr) {
+        eprintln!("{}", ErrorDisplayer(&error));
+    }
 }
 
 #[cfg(test)]
@@ -131,9 +83,13 @@ mod tests {
     use I18nUpdateRunError::*;
     use JsonValueNewError::*;
     use UpdateRowError::*;
+    use alloc::string::{String, ToString};
+    use alloc::vec;
     use pretty_assertions::assert_eq;
+    use std::eprintln;
     use std::error::Error;
     use thiserror::Error;
+    use tokio::io::{Error as TokioIoError, ErrorKind as TokioIoErrorKind};
 
     #[test]
     fn must_write_error() {
@@ -151,7 +107,7 @@ mod tests {
                         },
                         I18nRequestFailed {
                             source: RequestSendFailed {
-                                source: tokio::io::Error::new(tokio::io::ErrorKind::AddrNotAvailable, "server at 239.143.73.1 did not respond"),
+                                source: TokioIoError::new(TokioIoErrorKind::AddrNotAvailable, "server at 239.143.73.1 did not respond"),
                             },
                             row: Row::new("Bar"),
                         },
@@ -194,7 +150,7 @@ mod tests {
         let mut actual = String::new();
         let displayer = ErrorDisplayer(error);
         writeln!(actual, "{displayer}").unwrap();
-        eprintln!("{}", &actual);
+        eprintln!("{actual}");
         assert_eq!(actual, expected)
     }
 
@@ -227,7 +183,7 @@ mod tests {
         #[error("failed to construct a JSON schema")]
         JsonSchemaNewFailed { source: JsonSchemaNewError },
         #[error("failed to send a request")]
-        RequestSendFailed { source: tokio::io::Error },
+        RequestSendFailed { source: TokioIoError },
     }
 
     #[derive(Error, Debug)]
